@@ -1582,22 +1582,18 @@ compilation and indentation variables that can be customized."
  	    (save-excursion (beginning-of-line) (point))
  	    (point)))))
 
-(defun eif-on-comment-delimiter-p ()
-  "Return t if point is on a comment delimiter."
-  (and (or (looking-at comment-start-skip)
-	   (and (looking-at "-")
-		(not (bobp))
-		(save-excursion
-		  (backward-char 1)
-		  (looking-at "-"))))
-       (not (eif-in-quoted-string-p))))
-
 (defun eif-near-comment-p ()
   "Return t if point is close enough to a comment for filling purposes."
   (or (eif-in-comment-p)
-      (eif-on-comment-delimiter-p)
+      (and (or (looking-at comment-start-skip)
+	       (and (looking-at "-")
+		    (not (bobp))
+		    (save-excursion
+		      (backward-char 1)
+		      (looking-at "-"))))
+	   (not (eif-in-quoted-string-p)))
       (looking-at (concat "[ \t]*" comment-start-skip))))
-	   
+
 ;; ENHANCEME: Currently eif-beginning-of-feature only works for
 ;;            routines (`is' is crucial).  It should be made more
 ;;            general.
