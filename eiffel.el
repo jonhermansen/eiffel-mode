@@ -7,7 +7,8 @@
 
 ;; Authors: 1989-1990 Stephen Omohundro, ISE and Bob Weiner
 ;;          1993-1996 Tower Technology Corporation
-;;          1999-2000 Martin Schwenke <martin@meltin.net>
+;;          1999-2000 Martin Schwenke <martins@linuxcare.com>
+;; Maintainer: martins@linuxcare.com
 ;; Version: $Id$
 ;; Keywords: eiffel languages oop
 
@@ -45,8 +46,6 @@
 
 ;;; Commentary:
 
-;;  EIFFEL3  : GNU Emacs mode for Eiffel Version 3
-;;
 ;;  INSTALLATION
 ;;    To install, simply copy this file into a directory in your
 ;;    load-path and add the following two commands in your .emacs file:
