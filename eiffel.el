@@ -320,52 +320,75 @@ in Debian GNU/Linux, when the default value is \"se-compile\"."
 ;;
 ;; Font-lock support.
 ;;
-(defconst eiffel-font-lock-keywords
-  '(
-    ;; Major keywords
-    ("\\<\\(creation\\|deferred\\|separate\\|expanded\\|class\\|feature\\|indexing\\|inherit\\|obsolete\\)\\>" 1 font-lock-keyword-face t)
-
-    ;; Assertions
-    ("\\<\\(check\\|else\\|ensure\\|invariant\\|require\\|then\\|variant\\)\\>" 1 font-lock-type-face t)
-
-    ;; Minor keywords
-    ("\\<\\(agent\\|alias\\|all\\|and\\|as\\|create\\|debug\\|deferred\\|do\\|else\\|elseif\\|end\\|export\\|external\\|from\\|frozen\\|if\\|implies\\|infix\\|inspect\\|is\\|like\\|local\\|loop\\|not\\|obsolete\\|old\\|once\\|or\\|prefix\\|redefine\\|rename\\|rescue\\|retry\\|select\\|separate\\|strip\\|then\\|undefine\\|unique\\|until\\|when\\|xor\\)\\>" 1 font-lock-reference-face t)
-
-    ;; SmallEiffel guru words
-    ("\\<\\(c_inline_c\\|c_inline_h\\|to_pointer\\|is_expanded_type\\|is_basic_expanded_type\\|object_size\\|object_id_memory\\|se_guru01\\|se_guru02\\|se_guru03\\)\\>" 1 font-lock-warning-face t)
-
-    ;; Other Eiffel major variables
-    ("\\<\\([Vv]oid\\|[Rr]esult\\|[Cc]urrent\\|[Tt]rue\\|[Ff]alse\\|[Pp]recursor\\|io\\|std_input\\|std_output\\|std_error\\)\\>" 1 font-lock-variable-name-face t)
-
-    ;; Feature headers: attributes
-    ("^[ \t]*\\([A-Za-z][_0-9A-Za-z]*\\)[ \t]*:[ \t]*[A-Z][_0-9A-Z]*" 1 font-lock-function-name-face t)
-
-    ;; Feature headers: functions
-    ;; Unfortunately emacs does not handle well multiple matches. Only the last is highlighted.
-    ;; Should a fontifier function be provided...
-    ("^[ \t]*\\(\\(frozen[ \t]+\\|deferred[ \t]+\\)?\\(\\(prefix\\|infix\\)[ \t]+\".+\"\\|\\([A-Za-z][_0-9A-Za-z]*\\)\\)\\([ \t]*,?[ \t]*\\)\\)\\((.*)[ \t]*\\)?\\(:[ \t]*\\([A-Z][_0-9A-Z]*\\|like[ \t]+[^ \t]+\\)[ \t]*\\)?\\bis[ \t]*$" 5 font-lock-function-name-face t)
-
-    ;; Classnames: upper-case identifiers
-    ("\\<\\([A-Z][_0-9A-Z]*\\)\\>" 1 font-lock-constant-face t)
-
-    ;; Classical comments
-    ("--\\([^|\n].*\\)?$" 0 font-lock-comment-face t)
-
-    ;; Hidden comments
-    ("--|.*$" 0 font-lock-keyword-face t)
-
-    ;; Characters
-    ("'\\(%\\(/[0-9]+/\\|[^/]\\)\\|[^%'\"]\\)'" 0 font-lock-string-face t)
-
-    ;; Strings
-    ("\\(^[ \t]*%\\|\"\\)\\([^%\"]+\\|%\\(/[0-9]+/\\|[^/]\\)\\)*\\(\"\\|%$\\|$\\)" 0 font-lock-string-face t)
-
-    ;; Quoted expr's in comments and strings
-    ("`\\([^`'\n]+\\)'" 1 font-lock-reference-face t))
+(defconst eiffel-font-lock-keywords-1
+  `(;; hidden comments
+    ("--|.*" 0 font-lock-keyword-face t)
+    ;; routines
+    ("^[^-:(\n]+\\([^-)\n]*\\<is\\>\\s-*\\(--.*\\)?$\\|([^-:'\"\n]+:\\)"
+     (0 nil)
+     ;; will try to refontify occurences of `prefix "..."' and `infix "..."'
+     ;;(no problem if strings are already fontified)
+     ("\\s-*\\(\\<[a-z][a-z_0-9 \"@#|&]*\\)\\(,\\|[:(].*\\|is.*\\)"
+      (beginning-of-line) (end-of-line)
+      (1 font-lock-function-name-face))))
   "Regular expressions to use with font-lock mode.")
 
+(defconst eiffel-font-lock-keywords-2
+  (append
+   eiffel-font-lock-keywords-1
+   `(;; major keywords
+     ("\\(\\(^[ \t]*\\|[ \t]+\\)creation\\|^deferred[ \t]+class\\|expanded[ \t]+class\\|^class\\|^feature\\|^indexing\\|\\(^[ \t]*\\|[ \t]+\\)inherit\\|^obsolete\\)[ \t\n]" 0 font-lock-keyword-face nil)
+     ;; assertions
+     ("\\(^\\|[^_\n]\\<\\)\\(check\\|ensure then\\|ensure\\|invariant\\|require else\\|require\\|variant\\)\\($\\|\\>[^_\n]\\)" 2 font-lock-reference-face nil)
+     ;; minor keywords
+     ("\\(^\\|[^_\n]\\<\\)\\(agent\\|alias\\|all\\|and not\\|and then\\|and\\|as\\|create\\|debug\\|deferred\\|do\\|else\\|elseif\\|end\\|export\\|external\\|from\\|frozen\\|if not\\|if\\|implies not\\|implies\\|infix\\|inspect\\|is deferred\\|is unique\\|is\\|like\\|local\\|loop\\|not\\|obsolete\\|old\\|once\\|or else\\|or not\\|or\\|precursor\\|prefix\\|redefine\\|rename\\|rescue\\|retry\\|select\\|separate\\|strip\\|then\\|undefine\\|unique\\|until\\|when\\|xor\\)\\($\\|\\>[^_\n]\\)" 2 font-lock-keyword-face nil)
+     ;; quoted expr's in comments
+     ("`[^`'\n]*'" 0 font-lock-string-face t)
+     ;; classes
+     ("\\<\\(ANY\\|BIT\\|BOOLEAN\\|CHARACTER\\|DOUBLE\\|GENERAL\\|INTEGER\\|NONE\\|POINTER\\|REAL\\|STRING\\)\\>"
+      0 font-lock-type-face)))
+   "Regular expressions to use with font-lock mode and level 2 fontification.")
+
+(defconst eiffel-font-lock-keywords-3
+  (append
+   eiffel-font-lock-keywords-2
+   `(;; attributes/parameters/local variables
+     (,(concat "^[^-:\n]+:\\s-*"
+	       "\\(like\\s-*[a-zA-Z][a-z_0-9]*\\|"
+	       "\\(expanded\\s-*\\)?[A-Z][A-Z_0-9]*"
+	       "\\(\\s-*\\[[^-\n]*\\]\\)?\\)"
+	       "\\s-*\\($\\|[;)].*\\|--.*\\)")
+      (0 nil)
+      ("\\s-*\\(\\<[a-z][a-z_0-9]*\\)\\s-*\\(,\\|:[^;\n]*\\|).*\\)"
+       (re-search-backward "\\((\\|^\\)" nil t)
+       (end-of-line)
+       (1 font-lock-variable-name-face)))
+
+     ;; constants
+     ("^[^-:\n]+:[^-\n]*\\<is\\>\\s-*[^ \t\n]" (0 nil)
+      ("\\s-*\\(\\<[A-Za-z][a-z_0-9]*\\)\\s-*\\(,\\|:.*\\)"
+       (beginning-of-line) (end-of-line)
+       (1 font-lock-constant-face)))))
+  "Regular expressions to use with font-lock mode and level 3 fontification.")
+
+(defconst eiffel-font-lock-keywords-4
+  (append
+   eiffel-font-lock-keywords-3
+   '(;; SmallEiffel guru words
+     ("\\<\\(c_inline_c\\|c_inline_h\\|to_pointer\\|is_expanded_type\\|is_basic_expanded_type\\|object_size\\|object_id_memory\\|se_guru01\\|se_guru02\\|se_guru03\\)\\>" 1 font-lock-warning-face nil)
+     ;; Other Eiffel major variables
+     ("\\<\\([Vv]oid\\|[Rr]esult\\|[Cc]urrent\\|[Tt]rue\\|[Ff]alse\\|[Pp]recursor\\|io\\|std_input\\|std_output\\|std_error\\)\\>" 1 font-lock-constant-face t))))
+
+(defvar eiffel-font-lock-keywords eiffel-font-lock-keywords-1
+  "Default expressions to highlight in Eiffel mode.
+See also `c-font-lock-extra-types'.")
+
 (defconst eiffel-font-lock-defaults
-  '((eiffel-font-lock-keywords)
+  '((eiffel-font-lock-keywords
+     eiffel-font-lock-keywords-1
+     eiffel-font-lock-keywords-2
+     eiffel-font-lock-keywords-3
+     eiffel-font-lock-keywords-4)
     nil nil nil nil))
 
 (and (boundp 'font-lock-defaults-alist)
