@@ -7,8 +7,8 @@
 
 ;; Authors: 1989-1990 Stephen Omohundro, ISE and Bob Weiner
 ;;          1993-1996 Tower Technology Corporation
-;;          1999-2000 Martin Schwenke <martins@linuxcare.com>
-;; Maintainer: martins@linuxcare.com
+;;          1999-2000 Martin Schwenke <martin@meltin.net>
+;; Maintainer: martin@meltin.net
 ;; Keywords: eiffel languages oop
 ;; Requires: font-lock, compile, easymenu
 
