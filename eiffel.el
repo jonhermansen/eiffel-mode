@@ -720,7 +720,7 @@ This will also match local variable and parameter declarations.")
     (,(concat "^[ \t]*" eif-routine-begin-regexp) (0 nil)
      ;; will try to refontify occurences of `prefix "..."' and `infix "..."'
      ;;(no problem if strings are already fontified)
-     ("\\s-*\\(\\<[a-z][a-z_0-9 \"@#|&]*\\)\\(,\\|[:(].*\\|is.*\\)"
+     ("\\s-*\\(\\<[a-z][a-zA-Z_0-9 \"@#|&]*\\)\\(,\\|[:(].*\\|is.*\\)"
       (beginning-of-line) (end-of-line)
       (1 font-lock-function-name-face))))
   "Regular expressions to use with font-lock mode.")
@@ -757,13 +757,13 @@ This will also match local variable and parameter declarations.")
    eiffel-font-lock-keywords-2
    `(;; attributes/parameters/local variables
      (,(concat "^[ \t]*" eif-attribute-regexp) (0 nil)
-      ("\\s-*\\(\\<[a-z][a-z_0-9]*\\)\\s-*\\(,\\|:[^;\n]*\\|).*\\)"
+      ("\\s-*\\(\\<[a-z][a-zA-Z_0-9]*\\)\\s-*\\(,\\|:[^;\n]*\\|).*\\)"
        (re-search-backward "\\((\\|^\\)" nil t)
        (end-of-line)
        (1 font-lock-variable-name-face)))
      ;; constants
      (,(concat "^[ \t]*" eif-constant-regexp) (0 nil)
-      ("\\s-*\\(\\<[A-Za-z][a-z_0-9]*\\)\\s-*\\(,\\|:.*\\)"
+      ("\\s-*\\(\\<[A-Za-z][a-zA-Z_0-9]*\\)\\s-*\\(,\\|:.*\\)"
        (beginning-of-line) (end-of-line)
        (1 font-lock-constant-face)))))
   "Regular expressions to use with font-lock mode and level 3 fontification.")
@@ -772,8 +772,8 @@ This will also match local variable and parameter declarations.")
   ;; SmartEiffel guru keywords and major variables.
   (append
    eiffel-font-lock-keywords-3
-   `((,(eif-anchor eif-smarteiffel-guru-keywords) 2 font-lock-warning-face nil)
-     (,(eif-anchor eif-major-variable-keywords) 2 font-lock-constant-face t))))
+   `((,(eif-anchor eif-smarteiffel-guru-keywords) 2 font-lock-warning-face)
+     (,(eif-anchor eif-major-variable-keywords) 2 font-lock-constant-face))))
 
 (defvar eiffel-font-lock-keywords eiffel-font-lock-keywords-1
   "Default expressions to highlight in Eiffel mode.
