@@ -323,12 +323,38 @@ in Debian GNU/Linux, when the default value is \"se-compile\"."
 ;; Most of this font-lock code was contributed by: Karl Landström
 ;; <kala9469@student.su.se>
 ;;
+
+;; Factor out some important important regexps for use in
+;; eif-{beginning,end}-of-feature.
+
+(defconst eif-routine-begin-regexp
+  "[a-z_][^-:(\n]*\\([^-)\n]*\\<is\\>\\s-*\\(--.*\\)?$\\|([^-:'\"\n]+:\\)"
+  "Regexp matching the beginning of an Eiffel routine declaration.")
+
+(defconst eif-attribute-regexp
+  (concat "[a-z_][^-:\n]*:\\s-*"
+	  "\\(like\\s-*[a-zA-Z][a-z_0-9]*\\|"
+	  "\\(expanded\\s-*\\)?[A-Z][A-Z_0-9]*"
+	  "\\(\\s-*\\[[^-\n]*\\]\\)?\\)"
+	  "\\s-*\\($\\|[;)].*\\|--.*\\)")
+  "Regexp matching an Eiffel attribute, parameter or local variable.")
+
+(defconst eif-constant-regexp
+  "[a-z_][^-:\n]*:[^-\n]*\\<is\\>\\s-*[^ \t\n]"
+  "Regexp matching an Eiffel constant declaration.")
+
+(defconst eif-probably-feature-regexp
+  (concat "\\(" eif-routine-begin-regexp
+	  "\\|" eif-attribute-regexp
+	  "\\|" eif-constant-regexp "\\)")
+  "Regexp probably matching an Eiffel feature.
+This will also match local variable and parameter declarations.")
+
 (defconst eiffel-font-lock-keywords-1
   `(;; hidden comments
     ("--|.*" 0 font-lock-keyword-face t)
     ;; routines
-    ("^[^-:(\n]+\\([^-)\n]*\\<is\\>\\s-*\\(--.*\\)?$\\|([^-:'\"\n]+:\\)"
-     (0 nil)
+    (,(concat "^[ \t]*" eif-routine-begin-regexp) (0 nil)
      ;; will try to refontify occurences of `prefix "..."' and `infix "..."'
      ;;(no problem if strings are already fontified)
      ("\\s-*\\(\\<[a-z][a-z_0-9 \"@#|&]*\\)\\(,\\|[:(].*\\|is.*\\)"
@@ -356,19 +382,14 @@ in Debian GNU/Linux, when the default value is \"se-compile\"."
   (append
    eiffel-font-lock-keywords-2
    `(;; attributes/parameters/local variables
-     (,(concat "^[^-:\n]+:\\s-*"
-	       "\\(like\\s-*[a-zA-Z][a-z_0-9]*\\|"
-	       "\\(expanded\\s-*\\)?[A-Z][A-Z_0-9]*"
-	       "\\(\\s-*\\[[^-\n]*\\]\\)?\\)"
-	       "\\s-*\\($\\|[;)].*\\|--.*\\)")
-      (0 nil)
+     (,(concat "^[ \t]*" eif-attribute-regexp) (0 nil)
       ("\\s-*\\(\\<[a-z][a-z_0-9]*\\)\\s-*\\(,\\|:[^;\n]*\\|).*\\)"
        (re-search-backward "\\((\\|^\\)" nil t)
        (end-of-line)
        (1 font-lock-variable-name-face)))
 
      ;; constants
-     ("^[^-:\n]+:[^-\n]*\\<is\\>\\s-*[^ \t\n]" (0 nil)
+     (,(concat "^[ \t]*" eif-constant-regexp) (0 nil)
       ("\\s-*\\(\\<[A-Za-z][a-z_0-9]*\\)\\s-*\\(,\\|:.*\\)"
        (beginning-of-line) (end-of-line)
        (1 font-lock-constant-face)))))
@@ -719,7 +740,7 @@ function as more than one type of keyword.")
   "Keywords which introduce control-flow constructs.")
 
 (defconst eif-control-flow-matching-keywords
-  "\\(deferred\\|do\\|once\\|if\\|inspect\\|from\\|debug\\)[^a-z0-9_]"
+  "\\(deferred\\|do\\|once\[ \t\n]+[^\"]\|if\\|inspect\\|from\\|debug\\)[^a-z0-9_]"
   "Keywords that may cause the indentation of an `eif-control-flow-keyword'.
 If these occur prior to an `eif-control-flow-keyword' then the
 `eif-control-flow-keyword' is indented.  Note that technically, `end'
@@ -1731,24 +1752,149 @@ compilation and indentation variables that can be customized."
 	   (not (eif-in-quoted-string-p)))
       (looking-at (concat "[ \t]*" comment-start-skip))))
 
-;; ENHANCEME: Currently eif-beginning-of-feature only works for
-;;            routines (`is' is crucial).  It should be made more
-;;            general.
-;;
+(defun eif-re-search-forward (regexp &optional limit noerror)
+  "Search forward from point for REGEXP not in comment or string.
+`case-fold-search' is set to nil when searching.  For details on other
+arguments see \\[re-search-forward]."
 
-(defun eif-bof-p ()
-  "Return non-nil if point is at the beginning of a feature.
-This is defined as at the beginning of the feature name or anywhere in
-whitespace before the start of a feature (including at the end of the
-previous feature)."
-  (save-excursion
-    (save-match-data
-      (if (eif-in-comment-p)
-	  (end-of-line))
-      (looking-at (concat "\\(" eif-non-source-line "\\|\n\\)*"
-			  "[ \t]*\\b"
-			  eif-is-keyword-regexp)))))
+  (interactive "sRE search: ")
+  (let ((start (point))
+	found case-fold-search)
+    (while (and (setq found (re-search-forward regexp limit noerror))
+		(eif-in-comment-or-quoted-string-p)))
+    (if (and found
+	    (eif-not-in-comment-or-quoted-string-p))
+	found
+      (if (eq noerror t)
+	  (goto-char start))
+      nil)))
 
+(defun eif-re-search-backward (regexp &optional limit noerror)
+  "Search backward from point for REGEXP not in comment or string.
+`case-fold-search' is set to nil when searching.  For details on other
+arguments see \\[re-search-forward]."
+  (interactive "sRE search: ")
+  (let ((start (point))
+	found case-fold-search)
+    (while (and (setq found (re-search-backward regexp limit noerror))
+		(eif-in-comment-or-quoted-string-p)))
+    (if (and found
+	    (eif-not-in-comment-or-quoted-string-p))
+	found
+      (if (eq noerror t)
+	  (goto-char start))
+      nil)))
+
+(defconst eif-prefeature-regexp
+  (concat "\\(" eif-non-source-line "\\|\n\\)*" "[ \t]*")
+  "Regexp matching whitespace-equivalent content that.")
+
+(defun eif-find-end-of-feature ()
+  "Find the `end' of the current feature definition.
+Assumes point is at the beginning of the feature, not in a comment or
+quoted string."
+  (cond ((looking-at (concat eif-prefeature-regexp eif-routine-begin-regexp))
+	 ;; At the start of a routine, find matching end.
+	 (let ((current-level 0)
+	       (previous-level 0))
+	   (while (not (or (eobp) (and (= current-level 0)
+				       (= previous-level 1))))
+	     (eif-re-search-forward (concat eif-end-matching-keywords
+					    "\\|" eif-end-keyword)
+				    nil 'move)
+	     (backward-char 1)         ; matching eif-end-matching-keywords
+					; takes us one char to far
+	     ;; After a level changing keyword.
+	     (save-excursion
+	       (backward-word 1)
+	       (setq previous-level current-level)
+	       (cond ((looking-at eif-end-matching-keywords)
+		      (setq current-level (1+ current-level)))
+		     ((looking-at eif-end-keyword)
+		      (setq current-level (1- current-level))))))))
+	((looking-at (concat eif-prefeature-regexp
+			     eif-probably-feature-regexp))
+	 ;; Not a routine, find end of attribute or constant.
+	 (goto-char (match-end 0)))))
+
+;; OK, this works well, but it doesn't work for the following cases:
+;; * In the middle of the feature regexp that need to be matched.
+;;   However, it doesn't need to since it is currently only used from
+;;   well defined positions.
+(defun eif-find-beginning-of-feature ()
+  "Find the beginning of the most recent feature definition.
+This will always move backward, if possible."
+  (interactive)
+  
+  (let ((start (point))
+	candidate routine-begin routine-end)
+    (if (eif-re-search-backward (concat "\\s-" eif-probably-feature-regexp)
+				nil t)
+	(progn
+	  (forward-char) ;; Skip the whitespace character matched above.
+	  (if (not (or (looking-at (concat
+				    "\\(" eif-attribute-regexp
+				    "\\|" eif-constant-regexp "\\)"))))
+	      ;; This is a routine.  Done.
+	      (point)
+	    ;; Variable/attribute or constant declaration matched.
+	    ;; Now we go back and find the previous routine start, the
+	    ;; following end, and see if the current position
+	    ;; (candidate) is between.  If it is, then candidate is a
+	    ;; variable or constant declaration within a routine, so
+	    ;; we're interested in the routine start.  If it isn't,
+	    ;; then it must be a class attribute or constant, so it is
+	    ;; what we're looking for.
+	    (setq candidate (point))
+	    (goto-char start)
+	    (if (eif-re-search-backward
+		 (concat "\\s-" eif-routine-begin-regexp) nil t)
+		(progn 
+		  (forward-char)
+		  (setq routine-begin (point))
+		  (eif-find-end-of-feature)
+		  (if (and (< routine-begin candidate)
+			   (< candidate (point)))
+		      (goto-char routine-begin)
+		    (goto-char candidate)))))))))
+
+(defun eif-scan-for-features-after-point ()
+  "Return list of position of feature beginnings after point.
+List is in ascending order of buffer position."
+  (interactive)
+
+  (let ((start (point))
+	fs)
+    (save-excursion
+      (goto-char (point-max))
+      (while (and (eif-find-beginning-of-feature)
+		  (>= (point) start))
+	(add-to-list 'fs (point))))
+    fs))
+
+(defun eif-scan-for-features-before-point ()
+  "Return list of position of feature beginnings before point.
+List is in descending order of buffer position."
+  (interactive)
+
+  (let ((start (point))
+	fs)
+    (save-excursion
+      ;; We have to move forward to make sure we find any feature that
+      ;; we might be in the middle of the beginning of.  How far? 
+      ;; How about this far?
+      (eif-re-search-forward eif-probably-feature-regexp nil 'move)
+      ;; Now we only care about the ones before the place we started...
+      (while (eif-find-beginning-of-feature)
+	(if (< (point) start)
+	    (add-to-list 'fs (point)))))
+    (nreverse fs)))
+
+;; How does this perform?  The scan might be expensive, but it is
+;; certainly reliable, because we don't have to worry that the cursor
+;; is in the middle of something that may or may not be matched by a
+;; regexp.  If people think it performs badly on large files, is there
+;; some sort of caching we can do?
 (defun eif-beginning-of-feature (&optional arg)
   "Move backward to next feature beginning.
 With ARG, do it that many times.  Negative arg -N
@@ -1759,108 +1905,66 @@ Returns t unless search stops due to beginning or end of buffer."
   (or arg
       (setq arg 1))
 
-  ;; If not in the whitespace at the beginning of a feature, or going
-  ;; forward, then do this from after the "is".
-  (if (and (or (not (eif-bof-p))
-	       (and arg (< arg 0) (not (eobp))))
-	   (looking-at eif-is-keyword-regexp))
-      (re-search-forward eif-is-keyword-regexp))
-
-  (let ((success t))
-    ;; Change arg towards zero as we search, failing if we hit edge of buffer.
-    (while (or (and (> arg 0) (or (not (bobp)) (setq success nil)))
-	       (and (< arg 0) (or (not (eobp)) (setq success nil))))
-      (if (re-search-backward eif-is-keyword-regexp nil 'move
-			      (if (> arg 0) 1 -1))
-	  ;; If we found one, count it and keep moving.
-	  (if (eif-not-in-comment-or-quoted-string-p)
-	      (progn
-		(if (> arg 0)
-		    (setq arg (1- arg))
-		  (setq arg (1+ arg)))))))
-    (if success
-	(progn
-	  (backward-sexp 1)
-	  (if (looking-at "(")
-	      (backward-word 1))
-	  (beginning-of-line)))
-    success))
-
-(defun eif-find-end-of-feature ()
-  "Find the `end' of the current feature definition.
-Assumes point is at the beginning of the feature."
-  (let ((current-level 0)
-        (previous-level 0))
-    (while (not (or (eobp) (and (= current-level 0) (= previous-level 1))))
-      (re-search-forward (concat eif-end-matching-keywords
-                                 "\\|" eif-end-keyword)
-                         nil 'move)
-      (backward-char 1)         ; matching eif-end-matching-keywords
-                                ; takes us one char to far
-      (if (eif-not-in-comment-or-quoted-string-p)
-          ;; After a level changing keyword.
-          (save-excursion
-            (backward-word 1)
-            (setq previous-level current-level)
-            (cond ((looking-at eif-end-matching-keywords)
-                   (setq current-level (1+ current-level)))
-                  ((looking-at eif-end-keyword)
-                   (setq current-level (1- current-level)))))))))
-
-;; Could we use eif-matching line here instead?  That is, we would
-;; search for the initial "do" and then match it.  No, because there
-;; isn't always a "do" and it gets too hard!
-(defun eif-end-of-feature-forward-only (arg)
-  "Move forward to end of feature, ARG times."
-
-  ;; We try going backwards to the beginning of the current feature on
-  ;; the first iteration.  If we get nowhere, the first iteration will
-  ;; not count and we will go forward instead.
-  (let ((on-first-iteration t))
-    (while (and (> arg 0) (not (eobp)))
-
-      (let ((pos (point)))
-	;; If the previous search put us at the beginning of a feature
-	;; (as well as the end), then stay here.
-	(if (not (eif-bof-p))
-	    (if (and on-first-iteration
-		     (save-excursion (eif-beginning-of-feature)))
-		;; First iteration and there is a beginning of feature
-		;; back there somewhere, so go to it and see how we
-		;; go.
-		(eif-beginning-of-feature)
-	      ;; Subsequent iteration or no feature, go forward
-	      ;; instead.
-	      (eif-beginning-of-feature -1)))
-	(setq on-first-iteration nil)
-
-        (eif-find-end-of-feature)
-
-	;; If the end of the feature we are at involved moving
-	;; forward, then we are rocking, so this iteration counts.
-	(if (> (point) pos)
-	    (progn
-	      (end-of-line)
-	      (setq arg (1- arg)))))))
-
-  (forward-line))
-
+  (let (pos go)
+    (cond ((> arg 0)
+	   ;; Going backward.
+	   (let ((fs  (eif-scan-for-features-before-point))
+		 (n   (1- arg)))
+	     (setq pos (nth n fs))
+	     (setq go  (or pos (point-min)))))
+	  ((< arg 0)
+	   ;; Going forward.
+	   (let ((fs  (eif-scan-for-features-after-point))
+		 (n   (1- (- arg))))
+	     (setq pos (nth n fs))
+	     (setq go  (or pos (point-max))))))
+    (if go (goto-char go))
+    (if pos t)))
+	   
 (defun eif-end-of-feature (&optional arg)
   "Move forward to end of feature.
-
 With argument, do it that many times.  Negative argument means move
 back ARG preceding ends of features."
   (interactive "p")
 
   ;; Default is to find the first feature's end.
+  ;; Huh?  Even if they specify 0?  - martin@meltin.net
+  ;; Hmmm, it is what end-of-defun does...
   (if (or (null arg)
 	  (= arg 0))
       (setq arg 1))
 
-  (if (>= arg 0)
-      (eif-end-of-feature-forward-only arg)
-    (if (eif-beginning-of-feature (1+ (- arg)))
-	(eif-end-of-feature-forward-only 1))))
+  ;; This is a bad way of trying to get into position.  It seems to
+  ;; work.  However, it is exactly what we've tried to avoid in
+  ;; eif-beginning-of-feature by scanning first.  We could scan and
+  ;; find all of the end of features, but that would be even more
+  ;; expensive that finding the beginnings, since we would have to
+  ;; find each beginning, find the matching end, remember it, jump
+  ;; back to beginning, rinse and repeat.
+  ;;
+  ;; Now that this works, it is actually tempting to try the same
+  ;; gross hack for eif-beginning-of-feature.  Searching forward for
+  ;; features is difficult though.  Let's see how people report on the
+  ;; speed of eif-beginning-of-feature.
+  (if (eif-in-comment-p)
+      (end-of-line))
+  (cond ((looking-at (concat eif-prefeature-regexp "\\s-"
+			     eif-probably-feature-regexp))
+	 (eif-re-search-forward eif-prefeature-regexp nil t))
+	((save-excursion (and (not (bobp))
+			      (or (backward-char) t)
+			      (looking-at
+			       (concat "\\s-"
+				       eif-probably-feature-regexp))))
+	 t)
+	(t 
+	 (eif-beginning-of-feature)))
+
+  ;; This part is correct.
+  (if (eif-beginning-of-feature (+ (if (< arg 0) 1 0) (- arg)))
+      (progn
+	(eif-find-end-of-feature)
+	(forward-line))))
 
 (defun eif-narrow-to-feature ()
   "Make text outside current feature invisible.
@@ -2226,102 +2330,32 @@ point."
   "Generate index of features of a class, sorted by name."
   (eif-imenu-create-index 1))
 
-(defun eif-imenu-scan-for-names (prefix)
-  "within feature, scan for names"
-  (let ((menu nil))
-    (while (and
-            (search-forward-regexp "#?[a-z_][a-z0-9_]*" nil t)
-            (not (or
-                  (string= "feature" (match-string 0))
-                  (string= "invariant" (match-string 0))
-                  (string= "end" (match-string 0))
-                  )))
-
-      ;; skip to next line if we have a gepp directive
-      (if (= ?# (string-to-char (match-string 0)))
-          (forward-line)
-
-        ;; else, name is always a method or property
-        (let ((start (match-beginning 0)))
-          (setq menu
-                (cons (cons (concat prefix (match-string 0))
-                            start)
-                      menu))
-        )
-        ;; if comma follows, we have an alias, skip over comma and
-        ;; position cursor so that alias is parsed
-        (if (looking-at "[ \t]*,[ \t]*")
-            (goto-char (match-end 0))
-          ;; else employ brain-dead heuristic that if line ends with
-          ;; 'is', a method follows, else we have property...
-          (if (looking-at ".*is[ \t]*$")
-              (cond (
-                     (forward-line 1)
-                     (let ((end-counter 1))
-                       (while (> end-counter 0)
-                         (search-forward-regexp "\\(\\(--.*$\\)\\|\\b\\(end\\|if\\|from\\|inspect\\|check\\|debug\\)\\b\\)" nil t)
-                         (if (equal (match-string 2) nil)
-                             (cond (
-                                    (if (string= "end" (match-string 3))
-                                        (setq end-counter (- end-counter 1))
-                                      (setq end-counter (+ end-counter 1))))))
-                         (if (equal (match-string 1) nil)
-                             (setq end-counter 0))
-                         ))))
-            (forward-line)
-            (while (looking-at "^[ \t]*--") (forward-line))
-            )
-          )
-        )
-      )
-    menu)
-  )
-
-
 (defun eif-imenu-create-index (sort-method)
-  "Generates an index of all features of a class. Sort by position of
-   sort-method is 0. Sort by name if sort-method is 1"
-  (let (menu prev-pos feature-description prefix)
-    (goto-char (point-min))
-    (imenu-progress-message prev-pos 0)
-    (modify-syntax-entry ?_  "w  ")
+  "Generate an index of all features of a class.
+Sort by position if sort-method is 0. Sort by name if sort-method is 1."
 
+  (let (menu prevpos prefix)
+
+    (imenu-progress-message prevpos 0 t)
     (if (= sort-method 0)
         (setq prefix "  ")
       (setq prefix nil))
 
     ;; scan for features
-    (while (search-forward-regexp "^[ \t]*feature\\([ \t]+\\({[^}]+}[ \t]+\\)?--[ \t]*\\(.*\\)$\\)?" nil t)
-      (imenu-progress-message prev-pos nil t)
-      (let ((start (match-beginning 0)))
-        (if (equal (match-string 3) nil)
-            (setq feature-description "(no description)")
-          (setq feature-description (match-string 3)))
-        (if (= sort-method 0)
-            (setq menu
-                  (cons (cons feature-description start)
-                        menu))
-          )
-        )
+    (goto-char (point-max))
+    (while (eif-find-beginning-of-feature)
+      (imenu-progress-message prevpos nil t)
+      (if (looking-at "\\(\\sw\\|\\s_\\)+")
+	  (add-to-list 'menu (cons (buffer-substring-no-properties
+				    (match-beginning 0)
+				    (match-end 0)) (point)))))
 
-      ;; extend menu with names appearing within this feature
-      (setq menu (append menu (eif-imenu-scan-for-names prefix)))
-      ;; reposition cursor to beginning of last match, might be a feature
-      (goto-char (match-beginning 0))
-
-      )
-
-    ;; restore Eifel mode idea of a word
-    (modify-syntax-entry ?_  "_  ")
     (imenu-progress-message prev-pos 100)
 
     ;; sort in increasing buffer position order or by name
     (if (= sort-method 0)
         (sort menu (function (lambda (a b) (< (cdr a) (cdr b)))))
-      (sort menu (function (lambda (a b) (string< (car a) (car b)))))
-      )
-    )
-  )
+      (sort menu (function (lambda (a b) (string< (car a) (car b))))))))
 
 ;; XEmacs addition
 ;;;###autoload
