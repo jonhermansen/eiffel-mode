@@ -1,10 +1,10 @@
-;;; eiffel-mode.el --- major mode for editing Eiffel files.
+;;; eiffel.el --- major mode for editing Eiffel files.
 
 ;; Copyright (C) 1989, 1990, 1993, 1994, 1995, 1996, 1999, 2000, 2001, 2002
 ;;                         Tower Technology Corporation,
 ;;                         Free Software Foundation,
 ;;                         Bob Weiner,
-;;                         D. Colnet, C. Adrian
+;;                         C. Adrian
 
 ;; Authors: 1989-1990 Stephen Omohundro, ISE and Bob Weiner
 ;;          1993-1996 Tower Technology Corporation
@@ -17,7 +17,7 @@
 ;;
 ;; Known bugs:
 ;;
-;; * eif-short buffer doesn't get font locked under Emacs 19.34.
+;; * eif-short buffer doesn't get font locked under GNU Emacs 19.34.
 ;;
 ;; This file is distributed under the same terms as GNU Emacs.
 
@@ -47,7 +47,7 @@
 ;;    load-path and add the following two commands in your .emacs file:
 ;;
 ;;    (add-to-list 'auto-mode-alist '("\\.e\\'" . eiffel-mode))
-;;    (autoload 'eiffel-mode "eiffel-mode" "Major mode for Eiffel programs" t)
+;;    (autoload 'eiffel-mode "eiffel" "Major mode for Eiffel programs" t)
 ;;
 
 ;;; History:
@@ -61,7 +61,7 @@
 (require 'compile)
 (require 'easymenu)
 
-(defconst eiffel-mode-version-string
+(defconst eiffel-version-string
   "$Id$"
   "Version string to make reporting bugs more meaningful.
 Note that if this file becomes part of GNU Emacs then the file might
@@ -2063,5 +2063,5 @@ point."
 	  (setq eif-ind-val (current-column)))))
     (if (> eif-paren-depth 0) eif-ind-val -1)))
 
-(provide 'eiffel-mode)
-;;; eiffel-mode.el ends here
+(provide 'eiffel)
+;;; eiffel.el ends here
