@@ -2237,25 +2237,28 @@ Return t if successful, nil if not."
 	  (setq paren-count (1- paren-count)))))
     paren-count))
 
+(defun eif-manifest-array-common ()
+  "Common code for handling indentation/presence of Eiffel manifest arrays."
+  (let ((paren-count 0))
+    (if (= eif-last-feature-level-indent (eif-feature-level-indent-m))
+	nil
+      (setq eif-last-feature-level-indent (eif-feature-level-indent-m))
+      (setq eif-feature-level-indent-regexp
+	    (concat "^" (make-string eif-last-feature-level-indent ? )
+		    "[^ \t\n]")))
+    (while (and (<= paren-count 0) (re-search-backward "<<\\|>>" nil t))
+      (if (not (eif-peeking-backwards-at "|\\|@"))
+	  (if (looking-at "<<")
+	      (setq paren-count (1+ paren-count))
+	    (setq paren-count (1- paren-count)))))
+    paren-count))
+
 (defun eif-manifest-array-indent ()
   "Determine if we are inside of a manifest array."
   (interactive)
-  (let ((paren-count 0)
-	indent)
+  (let (indent)
     (save-excursion
-      (if (= eif-last-feature-level-indent (eif-feature-level-indent-m))
-	  nil
-	(setq eif-last-feature-level-indent (eif-feature-level-indent-m))
-	(setq eif-feature-level-indent-regexp
-	      (concat "^" (make-string eif-last-feature-level-indent ? )
-		      "[^ \t\n]"))))
-    (save-excursion
-      (while (and (<= paren-count 0) (re-search-backward "<<\\|>>" nil t))
-	(if (not (eif-peeking-backwards-at "|\\|@"))
-	    (if (looking-at "<<")
-		(setq paren-count (1+ paren-count))
-	      (setq paren-count (1- paren-count)))))
-      (if (> paren-count 0)
+      (if (> (eif-manifest-array-common) 0)
 	  (let ((eol (save-excursion (end-of-line) (point))))
 	    (setq indent
 		  (or (and (re-search-forward "[^< \t]" eol t)
@@ -2266,23 +2269,9 @@ Return t if successful, nil if not."
 (defun eif-manifest-array-start ()
   "Determine the indentation of the statement containing a manifest array."
   (interactive)
-  (let ((paren-count 0)
-	indent)
+  (let (indent)
     (save-excursion
-      (if (= eif-last-feature-level-indent (eif-feature-level-indent-m))
-	  nil
-	(setq eif-last-feature-level-indent (eif-feature-level-indent-m))
-	(setq eif-feature-level-indent-regexp
-	      (concat "^" (make-string eif-last-feature-level-indent ? )
-		      "[^ \t\n]"))))
-    (save-excursion
-      (while (and (<= paren-count 0)
-		  (re-search-backward "<<\\|>>" nil t))
-	(if (not (eif-peeking-backwards-at "|\\|@"))
-	    (if (looking-at "<<")
-		(setq paren-count (1+ paren-count))
-	      (setq paren-count (1- paren-count)))))
-      (if (> paren-count 0)
+      (if (> (eif-manifest-array-common) 0)
 	  (let ((limit (progn (end-of-line) (point))))
 	    (beginning-of-line)
 	    (if (re-search-forward "^[ \t]*<<" limit t)
