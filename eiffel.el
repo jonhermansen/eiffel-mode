@@ -562,6 +562,14 @@ part of this list but it is handled separately in the function
 If one of these occurs prior to an `eif-obsolete-keyword' then the
 `eif-obsolete-keyword' is indented.")
 
+(defconst eif-create-keyword
+  "create"
+  "Eiffel class keyword.  Can be used at class or minor level.")
+
+(defconst eif-create-keyword-regexp
+  (eif-post-anchor "create")
+  "Regexp matching `create' keyword, with trailing context.")
+
 (defconst eif-indentation-keywords
   (concat "indexing\\|rescue\\|inherit\\|creation" "\\|"
 	  "invariant\\|require\\|local\\|ensure\\|obsolete" "\\|"
@@ -603,7 +611,7 @@ See `eif-operator-keywords'.")
   "Eiffel operators - used to identify continuation lines.")
 
 (defconst eif-misc-keywords
-  (concat "agent\\|all\\|as\\|create\\|frozen\\|infix\\|like" "\\|"
+  (concat "agent\\|all\\|as\\|frozen\\|infix\\|like" "\\|"
 	  "old\\|precursor\\|prefix\\|strip\\|unique\\|xor" "\\|"
 	  "expanded\\|reference")
   "Eiffel miscellaneous keywords.")
@@ -636,7 +644,9 @@ See `eif-preprocessor-keywords'.")
 
 (defconst eif-all-keywords
   (concat eif-indentation-keywords    "\\|"
-	  "then\\|end")
+	  eif-solitary-then-keyword   "\\|"
+	  eif-create-keyword          "\\|"
+	  eif-end-keyword)
   "Regexp matching (nearly) any eiffel keyword in a line.
 Does not include `is'.")
 
@@ -1106,7 +1116,14 @@ don't start with a relevant keyword, the calculation is handed off to
       ;; Look for a keyword on the current line.
       (if (looking-at eif-all-keywords-regexp)
 
-	  (cond ((looking-at eif-class-level-keywords-regexp)
+	  (cond ((looking-at eif-create-keyword-regexp)
+		 ;; Class-level or minor occurence?
+		 (if (save-excursion (eif-find-beginning-of-feature))
+		     ;; Minor.
+		     (setq indent (eif-calc-indent-non-keyword))
+		   ;; Class-level.
+		   (setq indent (eif-class-level-kw-indent-m))))
+		((looking-at eif-class-level-keywords-regexp)
 		 ;; File level keywords (indent defaults to 0)
 		 (setq indent (eif-class-level-kw-indent-m)))
 		((looking-at eif-inherit-level-keywords)
@@ -1268,14 +1285,11 @@ line on that preceding line."
 	;; Record whether this line begins with an operator.  We assume
 	;; that the line is a continuation line if it begins with an operator
 	(beginning-of-line)
-	(if (looking-at eif-operator-regexp)
-	    (setq continuation t)
-	  (setq continuation nil))
+	(setq continuation (looking-at eif-operator-regexp))
+
 	;; Record whether the line being indented begins with an "<id> :"
 	;; This is used in indenting assertion tag expressions.
-	(if (looking-at "[ \t]*[a-zA-Z0-9_]+[ \t]*:")
-	    (setq id-colon t)
-	  (setq id-colon nil))
+	(setq id-colon (looking-at "[ \t]*[a-zA-Z0-9_]+[ \t]*:"))
 	
 	(forward-line -1)
 	(beginning-of-line)
@@ -1286,7 +1300,7 @@ line on that preceding line."
 	(if (eif-line-contains-close-paren)
 	    (backward-sexp))
 	(eif-skip-leading-whitespace)
-	
+
 	(cond ((and (= (point) 1)
 		    originally-looking-at-comment
 		    (setq indent (eif-class-level-comment-indent-m))))
@@ -1301,7 +1315,11 @@ line on that preceding line."
 		   (setq indent (eif-feature-level-comment-indent-m))
 		 ;; Else  the line being indented is not a comment
 		 (setq indent (eif-feature-level-kw-indent-m))))
-	      ((looking-at eif-feature-indentation-keywords-regexp)
+	      ;; Feature indentation keyword or class-level `create'.
+	      ((or (looking-at eif-feature-indentation-keywords-regexp)
+		   (and (looking-at eif-create-keyword-regexp)
+			(not (save-excursion
+			       (eif-find-beginning-of-feature)))))
 	       (setq indent (eif-feature-level-indent-m)))
 	      ((looking-at eif-indentation-keywords-regexp)
 	       (if (looking-at eif-end-on-current-line)
@@ -1345,7 +1363,11 @@ line on that preceding line."
 		     (setq indent (eif-current-line-indent))))))
 	      ((setq indent (eif-manifest-array-start))
 	       indent)
-	      ((not (looking-at eif-all-keywords-regexp))
+	      ;; OK, this is a sanity check, but it kills a minor
+	      ;; instance of `create', so we need to code the corner
+	      ;; case.
+	      ((or (not (looking-at eif-all-keywords-regexp))
+		   (looking-at eif-create-keyword-regexp))
 	       (if originally-looking-at-comment
 		   ;; Then  the line we are trying to indent is a comment
 		   (cond ((eif-continuation-line)
