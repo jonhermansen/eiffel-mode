@@ -320,6 +320,9 @@ in Debian GNU/Linux, when the default value is \"se-compile\"."
 ;;
 ;; Font-lock support.
 ;;
+;; Most of this font-lock code was contributed by: Karl Landström
+;; <kala9469@student.su.se>
+;;
 (defconst eiffel-font-lock-keywords-1
   `(;; hidden comments
     ("--|.*" 0 font-lock-keyword-face t)
