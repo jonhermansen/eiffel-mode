@@ -56,7 +56,7 @@
 ;;
 
 ;;; History:
-;; 
+;;
 
 ;; Add history stuff here!!!
 
@@ -279,16 +279,16 @@ relative to indent of previous line."
 
 ;;
 ;; Compilation support for GNU SmallEiffel.
-;; 
+;;
 
 (defcustom eif-use-gnu-eiffel t
   "*If t include support for compilation using GNU SmallEiffel."
   :type 'boolean
   :group 'eiffel-compile)
 
-(defcustom eif-compile-command 
+(defcustom eif-compile-command
   (if (file-executable-p "/usr/bin/se-compile")
-      "se-compile" 
+      "se-compile"
     "compile")
   "*Program to use for compiling Eiffel programs.  The default is
 \"compile\", unless \"/usr/bin/se-compile\" exists, as in Debian
@@ -364,7 +364,7 @@ returned as character positions rather than screen columns."
   ;; Do the save first, since the user might still have their hand on
   ;; the mouse.
   (save-some-buffers (not compilation-ask-about-save) nil)
-	 
+
   (setq eif-compile-dir (file-name-directory (buffer-file-name)))
   (setq eif-compile-target
 	(file-name-sans-extension
@@ -400,7 +400,7 @@ If SEPARATORS is absent, it defaults to \"[ \\f\\t\\n\\r\\v]+\".
 
 If there is match for SEPARATORS at the beginning of STRING, we do not
 include a null substring for that.  Likewise, if there is a match
-at the end of STRING, we don't include a null substring for that."
+at the end of STRING, we do not include a null substring for that."
   (let ((rexp (or separators "[ \f\t\n\r\v]+"))
 	(start 0)
 	notfirst
@@ -447,7 +447,7 @@ at the end of STRING, we don't include a null substring for that."
 
 ;; This has been loosened up to spot parts of messages that contain
 ;; references to multiple locations.  Thanks to Andreas
-;; <nozone@sbox.tu-graz.ac.at>. Also, the column number is a character
+;; <nozone@sbox.tu-graz.ac.at>.  Also, the column number is a character
 ;; count rather than a screen column, so we need to make sure that
 ;; compilation-error-screen-columns is nil.  Note that in XEmacs this
 ;; variable doesn't exist, so we end up in the wrong column.  Hey, at
@@ -574,7 +574,7 @@ function as more than one type of keyword.")
 (defconst eif-non-id-char-regexp "[^a-z0-9_]"
   "The characters that are not part of identifiers.")
 
-(defconst eif-end-keyword-regexp "[^a-z0-9_]end[^a-z0-9_]"
+(defconst eif-end-keyword-regexp "\\(^\\|[^a-z0-9_]\\)end\\($\\|[^a-z0-9_]\\)"
   "The `end' keyword with context.")
 
 (defconst eif-end-matching-keywords
@@ -724,22 +724,22 @@ constructs do not require correct indentation of the preceding line."
 	kw-match continuation id-colon)
 
     (save-excursion
-      
+
       ;; Save location of line-end and skip past leading white space.
       (end-of-line)
       (setq line-end   (point))
       (beginning-of-line)
       (re-search-forward eif-white-space-regexp line-end t)
-      
+
       ;; Is the line we are trying to indent a comment line?
       (setq originally-looking-at-comment (looking-at eif-comment-line-regexp))
-      
+
       ;; Is the line we are trying to indent a lone string?
       (setq originally-looking-at-lone-string (looking-at "\"[^\"]*\"[ \t]*$"))
-      
+
       ;; Look for a keyword on the current line
       (if (looking-at eif-all-keywords-regexp)
-	  
+
 	  ;; Then we are looking at a keyword
 	  (cond ((looking-at eif-class-level-keywords)
 		 ;; File level keywords (indent defaults to 0)
@@ -855,14 +855,14 @@ constructs do not require correct indentation of the preceding line."
 		     (setq indent (eif-feature-level-kw-indent-m))
 		   ;; Else - class obsolete
 		   (setq indent (eif-class-level-kw-indent-m)))))
-	
+
 	;; Else no keyword on current line,
 	;;   are we in a multi-line parenthesis expression
-	
+
 	(if (or (and (> (eif-in-paren-expression) 0)
 		     (> (setq indent (eif-indent-multi-line)) -1))
 		(setq indent (eif-manifest-array-indent)))
-	    
+
 	    ;; multi-line parenthesis expression
 	    ;; Move string continuation lines as per configuration.
 	    (if (looking-at "%")
@@ -872,7 +872,7 @@ constructs do not require correct indentation of the preceding line."
 	  ;; that is not a continuation line of a multi-line parnethesized
 	  ;; expression.
 
-	  ;; Record whether this line begins with an operator. We assume
+	  ;; Record whether this line begins with an operator.  We assume
 	  ;; that the line is a continuation line if it begins with an operator
 	  (beginning-of-line)
 	  (if (looking-at eif-operator-regexp)
@@ -883,7 +883,7 @@ constructs do not require correct indentation of the preceding line."
 	  (if (looking-at "[ \t]*[a-zA-Z0-9_]+[ \t]*:")
 	      (setq id-colon t)
 	    (setq id-colon nil))
-	  
+
 	  (forward-line -1)
 	  (beginning-of-line)
 	  (while (and (looking-at eif-non-source-line) (not (= (point) 1)))
@@ -895,7 +895,7 @@ constructs do not require correct indentation of the preceding line."
 	  (setq line-end (point))
 	  (beginning-of-line)
 	  (re-search-forward eif-white-space-regexp line-end t)
-	  
+
 	  (cond ((and (= (point) 1)
 		      originally-looking-at-comment
 		      (setq indent (eif-class-level-comment-indent-m))))
@@ -983,11 +983,11 @@ constructs do not require correct indentation of the preceding line."
 		       ;; Then the line being indented is a continuation line
 		       (if  (eif-continuation-line)
 			   ;; The line preceding the line being indented is
-			   ;; also a continuation line. Indent to the current
+			   ;; also a continuation line.  Indent to the current
 			   ;; line indentation.
 			   (setq indent (eif-current-line-indent))
 			 ;; Else The line preceding the line being indented is
-			 ;; not a continuation line. Indent an extra
+			 ;; not a continuation line.  Indent an extra
 			 ;; eif-continuation-indent
 			 (setq indent (+ (eif-current-line-indent)
 					 (eif-continuation-indent-m))))
@@ -995,12 +995,12 @@ constructs do not require correct indentation of the preceding line."
 		     (if (eif-continuation-line)
 			 (if id-colon
 			     ;; Then the line preceding the one being indented
-			     ;; is an assertion continuation. Indent the current
+			     ;; is an assertion continuation.  Indent the current
 			     ;; line to the same level as the preceding assertion
 			     ;; tag.
 			     (setq indent (eif-indent-assertion-tag))
 			   ;; Then the line preceding the one being indented is
-			   ;; a continuation line. Un-indent by an
+			   ;; a continuation line.  Un-indent by an
 			   ;; eif-continuation-indent.
 			   (setq indent (- (eif-current-line-indent)
 					   eif-indent-increment)))
@@ -1115,7 +1115,7 @@ the indentation of the `end' minus the value of
 		      (- (eif-current-line-indent) (eif-check-keyword-indent-m)))
 	      ;; Else
 	      (setq eif-matching-indent (eif-current-line-indent))))
-	;; Else no keyword was found. I think this is an error
+	;; Else no keyword was found.  I think this is an error
 	(setq eif-matching-indent 0)
 	(message "No matching indent keyword was found"))
       keyword)))
@@ -1294,7 +1294,7 @@ of the syntactic construct containing the point."
     (set-mark matching-point)))
 
 ;; ENHANCEME: Make this function correctly indent more than just routine
-;;            bodies and their sub-constructs. At the least it should
+;;            bodies and their sub-constructs.  At the least it should
 ;;            handle whole routines also.
 (defun eif-indent-construct ()
   "Indent an entire eiffel syntactic construct.
@@ -1332,7 +1332,7 @@ The region may be specified using optional arguments START and END."
 
 ;;(defun eif-goto-matching-line (&optional direction)
 ;;  "Place the cursor on the line which closes(opens) the current
-;;opening(closing) syntactic construct. For example if the point
+;;opening(closing) syntactic construct.  For example if the point
 ;;is on `from', executing goto-matching-line places the point
 ;;on the matching `end' and vice-versa."
 ;;  (interactive)
@@ -1409,11 +1409,14 @@ does matching of parens ala \\[backward-sexp]'."
 (if eiffel-mode-map
     nil
   (let ((map (make-sparse-keymap)))
-    (define-key map [(control j)]      'newline-and-indent)
-    (define-key map [(return)]         'reindent-then-newline-and-indent)
-    (define-key map [(meta control q)] 'eif-indent-construct)
-    (define-key map [(meta \')]        'eif-feature-quote)
-    (define-key map [(meta q)]         'eif-fill-paragraph)
+    (define-key map [(control j)]       'newline-and-indent)
+    (define-key map [(return)]          'reindent-then-newline-and-indent)
+    (define-key map [(meta control q)]  'eif-indent-construct)
+    (define-key map [(meta \')]         'eif-feature-quote)
+    (define-key map [(meta q)]          'eif-fill-paragraph)
+    (define-key map [(meta control a)]  'eif-beginning-of-feature)
+    (define-key map [(meta control e)]  'eif-end-of-feature)
+    (define-key map [(control x) ?n ?d] 'eif-narrow-to-feature)
     (setq eiffel-mode-map map)))
 
 (defvar eiffel-mode-syntax-table nil
@@ -1526,7 +1529,7 @@ compilation and indentation variables that can be customized."
     (define-key eiffel-mode-map "\C-c\C-o" nil)
     (define-key eiffel-mode-map "\C-c\C-r" nil)
     (define-key eiffel-mode-map "\C-c\C-s" nil))
-    
+
   (use-local-map eiffel-mode-map)
   (eif-add-menu)
   (set-syntax-table eiffel-mode-syntax-table)
@@ -1573,25 +1576,109 @@ compilation and indentation variables that can be customized."
 	     (forward-char 1))
 	(search-backward "--" (save-excursion (beginning-of-line) (point)) t))))
 
-;; ENHANCEME: Currently eif-beginning-of-feature only works for routines.
-;;            It should be made more general.
+;; ENHANCEME: Currently eif-beginning-of-feature only works for
+;;            routines (`is' is crucial).  It should be made more
+;;            general.
 ;;
+
+(defun eif-bof-p ()
+  "Return non-nil if we are at the beginning of a feature.
+This is defined as at the beginning of the feature name or anywhere in
+whitespace before the start of a feature (including at the end of the
+previous feature, but not in a comment)."
+
+  (save-match-data
+    (looking-at (concat "[ \t\n]*\\b" eif-is-keyword-regexp))))
 
 (defun eif-beginning-of-feature (&optional arg)
   "Move backward to next feature beginning.
-With ARG, do this that many times.  Returns t unless search stops
-due to beginning of buffer."
+With ARG, do it that many times.  Negative arg -N
+means move forward to Nth following beginning of feature.
+Returns t unless search stops due to beginning or end of buffer."
   (interactive "p")
-  (and arg (< arg 0) (forward-char 1))
-  (if (or (re-search-backward eif-multiline-routine-is-keyword-regexp
-			      nil t (or arg 1))
-	  (re-search-backward eif-is-keyword-regexp
-			      nil 'move (or arg 1)))
+
+  ;; If we're not in the whitespace at the beginning of a feature, or
+  ;; we're going forward, then let's do this from after the "is".
+  (if (and (or (not (eif-bof-p))
+	       (and arg (< arg 0) (not (eobp))))
+	   (looking-at eif-is-keyword-regexp))
+      (re-search-forward eif-is-keyword-regexp))
+  
+  (if (re-search-backward eif-is-keyword-regexp nil 'move (or arg 1))
       (progn
 	(backward-sexp 1)
 	(if (looking-at "(")
 	    (backward-word 1))
 	(beginning-of-line))))
+
+;; Could we use eif-matching line here instead?  That is, we would
+;; search for the initial "do" and then match it.
+(defun eif-end-of-feature-forward-only (&optional arg)
+  "Move forward to end of feature.
+With argument, do it that many times.  Does nothing for negative
+argument!"
+
+  (if (or (null arg)
+	  (= arg 0))
+      (setq arg 1))
+
+  (while (and (> arg 0) (< (point) (point-max)))
+
+    (let ((pos (point)))
+      ;; If not at the beginning of the current feature, then go there.
+      (if (not (eif-bof-p))
+	  (eif-beginning-of-feature))
+      (let ((level 0)
+	    (old-level 0))
+	(while (not (or (eobp) (and (= level 0) (= old-level 1))))
+	  (re-search-forward (concat eif-end-matching-keywords
+				     "\\|" eif-end-keyword)
+			     nil 'move)
+	  (cond ((eif-in-comment-p)
+		 (end-of-line)) ; skip comment
+		((eif-in-quoted-string-p)
+		 (re-search-forward "[^%]\"")) ; skip string
+		(t
+		 ;; After a level changing keyword?
+		 (save-excursion
+		   (backward-word 1)
+		   (setq old-level level)
+		   (cond ((looking-at eif-end-matching-keywords)
+			  (setq level (1+ level)))
+			 ((looking-at eif-end-keyword)
+			  (setq level (1- level))))))))
+	;; Hack: if we went nowhere or backwards then just go to eob.
+	(message "pos=%d, point=%d" pos (point))
+	(if (<= (point) pos)
+	    (goto-char (point-max)))))
+    (end-of-line)
+    (setq arg (1- arg)))
+
+  ;; Go to beginning of next line.
+  (forward-line))
+
+(defun eif-end-of-feature (&optional arg)
+  "Move forward to end of feature.
+With argument, do it that many times.  Negative argument -N means move
+back to Nth preceding end of defun."
+  (interactive "p")
+  (if (>= arg 0)
+      (eif-end-of-feature-forward-only arg)
+    (eif-beginning-of-feature (1+ (- arg)))
+    (setq arg 1)
+    (if (not (bobp))
+	(eif-end-of-feature-forward-only))))
+
+(defun eif-narrow-to-feature ()
+  "Make text outside current feature invisible.
+The feature visible is the one that contains point or follows point."
+  (interactive)
+  (save-excursion
+    (widen)
+    (eif-end-of-feature)
+    (let ((end (point)))
+      (eif-beginning-of-feature)
+      (narrow-to-region (point) end))))
 
 (defun eif-current-line-indent ()
   "Return the indentation of the line containing the point."
@@ -1621,7 +1708,7 @@ of the string."
 	(setq count (1+ count))
 	(if (= count 1) (setq search-limit (1+ search-limit))))
       ;; If the number of quotes (including continuation line markers)
-      ;; is odd, then we are inside of a string. Also if non-strict-p
+      ;; is odd, then we are inside of a string.  Also if non-strict-p
       ;; and we are in the leading white space of a continuation line,
       ;; then we are in a quote.
       (or (= (% count 2) 1)
