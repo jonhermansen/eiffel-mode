@@ -1509,15 +1509,15 @@ of the string."
       (while (re-search-forward initial-regexp search-limit t)
 	(setq count (1+ count))
 	(if (= count 1) (setq search-limit (1+ search-limit))))
-      ;; If the number of quotes (including continuation line markers) is odd,
-      ;; then we are inside of a string. Also if non-strict-p and we are in
-      ;; the leading white space of a continuation line, then we are in a quote.
-      (if (= (% count 2) 1)
-	  t
-	(beginning-of-line)
-	(if non-strict-p
-	    (if (looking-at "^[ \t]*%")
-		t))))))
+      ;; If the number of quotes (including continuation line markers)
+      ;; is odd, then we are inside of a string. Also if non-strict-p
+      ;; and we are in the leading white space of a continuation line,
+      ;; then we are in a quote.
+      (or (= (% count 2) 1)
+	  (progn
+	    (beginning-of-line)
+	    (and non-strict-p
+		 (looking-at "^[ \t]*%")))))))
 
 ;; ----------------------------------------------------------------------
 ;; End of portion derived from "eiffel.el"
