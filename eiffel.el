@@ -1361,8 +1361,8 @@ does matching of parens ala \\[backward-sexp]'."
 (if eiffel-mode-map
     nil
   (let ((map (make-sparse-keymap)))
-    (define-key map [(control j)]      'eif-newline)
-    (define-key map [(return)]         'eif-indent-and-newline)
+    (define-key map [(control j)]      'newline-and-indent)
+    (define-key map [(return)]         'reindent-then-newline-and-indent)
     (define-key map [(meta control q)] 'eif-indent-construct)
     (define-key map [(meta \')]        'eif-feature-quote)
     (define-key map [(meta q)]         'eif-fill-paragraph)
@@ -1451,7 +1451,7 @@ does matching of parens ala \\[backward-sexp]'."
 (defun eiffel-mode ()
   "Major mode for editing Eiffel programs.
 \\[indent-for-tab-command] indents the current Eiffel line correctly and
-\\[eif-indent-and-newline] causes the current and next line to be
+\\[reindent-then-newline-and-indent] causes the current and next line to be
 properly indented.
 
 Key definitions:
@@ -1657,19 +1657,6 @@ Comments that are not the only thing on a line return nil as their prefix."
 	      (beginning-of-line)
 	      (setq para-end (point)))
 	    (fill-region para-begin para-end))))))
-  
-(defun eif-newline ()
-  "Insert a newline and indent the new line."
-  (interactive)
-  (insert "\n")
-  (eif-indent-line))
-
-(defun eif-indent-and-newline ()
-  "Indent the current line.  Insert a newline and indent the new line."
-  (interactive)
-  (eif-indent-line)
-  (insert "\n")
-  (eif-indent-line))
 
 (defun eif-indent-line (&optional whole-exp)
   "Indent the current line as Eiffel code.
