@@ -1491,7 +1491,7 @@ does matching of parens ala \\[backward-sexp]'."
 	    ["----------" nil nil]
 	    (list "Comments"
 		  ["Feature Quote" eif-feature-quote  (eif-in-comment-p)]
-		  ["Fill         " eif-fill-paragraph (eif-in-comment-p)])
+		  ["Fill         " eif-fill-paragraph (eif-near-comment-p)])
 	    ["----------" nil nil]
             ["Customize"           eif-customize     t])))
   (easy-menu-add eiffel-mode-menu))
@@ -1567,30 +1567,37 @@ compilation and indentation variables that can be customized."
 
 (defun eif-not-in-comment-or-quoted-string-p ()
   "Return t if point is not in a comment or quoted string."
-  (not eif-in-comment-or-quoted-string-p))
+  (not (eif-in-comment-or-quoted-string-p)))
   
 (defun eif-in-comment-or-quoted-string-p ()
   "Return t if point is in a comment or quoted string."
   (or (eif-in-comment-p)
       (eif-in-quoted-string-p)))
   
-(defun eif-in-comment-p ()
+(defsubst eif-in-comment-p ()
   "Return t if point is in a comment."
-  (let ((pos (point))
- 	(eol (save-excursion (end-of-line) (point))))
-    (save-excursion
-      (beginning-of-line)
-      (let ((bol (point)))
- 	;; Skip things that look like comments but are in a string.
- 	(while (and (re-search-forward comment-start-skip eol t)
- 		    ;; Avoid corner case: -- "blah"
- 		    (progn (backward-char 1) t)
- 		    (eif-in-quoted-string-p)))
- 	;; Now go back and find that comment, if there was one.
- 	(and (re-search-backward comment-start-skip bol t)
- 	     (>= pos (point))
- 	     (not (eif-in-quoted-string-p)))))))
+  (interactive)
+  (save-excursion
+    (nth 4 (parse-partial-sexp
+ 	    (save-excursion (beginning-of-line) (point))
+ 	    (point)))))
 
+(defun eif-on-comment-delimiter-p ()
+  "Return t if point is on a comment delimiter."
+  (and (or (looking-at comment-start-skip)
+	   (and (looking-at "-")
+		(not (bobp))
+		(save-excursion
+		  (backward-char 1)
+		  (looking-at "-"))))
+       (not (eif-in-quoted-string-p))))
+
+(defun eif-near-comment-p ()
+  "Return t if point is close enough to a comment for filling purposes."
+  (or (eif-in-comment-p)
+      (eif-on-comment-delimiter-p)
+      (looking-at (concat "[ \t]*" comment-start-skip))))
+	   
 ;; ENHANCEME: Currently eif-beginning-of-feature only works for
 ;;            routines (`is' is crucial).  It should be made more
 ;;            general.
