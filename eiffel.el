@@ -269,7 +269,10 @@ line.  Can be negative."
   :type 'boolean
   :group 'eiffel-compile)
 
-(defcustom eif-compile-command "compile"
+(defcustom eif-compile-command 
+  (if (file-executable-p "/usr/bin/se-compile")
+      "se-compile" 
+    "compile")
   "*Program to use for compiling Eiffel programs.
 The default is \"compile\".  In Debian GNU/Linux this is probably
 \"se-compile\"."
