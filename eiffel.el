@@ -258,7 +258,7 @@ line.  Can be negative."
     ;; assertions
     ("\\(^\\|[^_\n]\\<\\)\\(check\\|ensure then\\|ensure\\|invariant\\|require else\\|require\\|variant\\)\\($\\|\\>[^_\n]\\)" 2 font-lock-reference-face nil)
     ;; minor keywords
-    ("\\(^\\|[^_\n]\\<\\)\\(alias\\|all\\|and not\\|and then\\|and\\|as\\|debug\\|deferred\\|do\\|else\\|elseif\\|end\\|export\\|external\\|from\\|frozen\\|if not\\|if\\|implies not\\|implies\\|infix\\|inspect\\|is deferred\\|is unique\\|is\\|like\\|local\\|loop\\|not\\|obsolete\\|old\\|once\\|or else\\|or not\\|or\\|prefix\\|redefine\\|rename\\|rescue\\|retry\\|select\\|strip\\|then\\|undefine\\|unique\\|until\\|when\\|xor\\)\\($\\|\\>[^_\n]\\)" 2 font-lock-function-name-face nil)
+    ("\\(^\\|[^_\n]\\<\\)\\(alias\\|all\\|and not\\|and then\\|and\\|as\\|create\\|debug\\|deferred\\|do\\|else\\|elseif\\|end\\|export\\|external\\|from\\|frozen\\|if not\\|if\\|implies not\\|implies\\|infix\\|inspect\\|is deferred\\|is unique\\|is\\|like\\|local\\|loop\\|not\\|obsolete\\|old\\|once\\|or else\\|or not\\|or\\|precursor\\|prefix\\|redefine\\|rename\\|rescue\\|retry\\|select\\|strip\\|then\\|undefine\\|unique\\|until\\|when\\|xor\\)\\($\\|\\>[^_\n]\\)" 2 font-lock-function-name-face nil)
     ;; hidden comments
     ("--|.*" 0 font-lock-keyword-face t)
     ;; quoted expr's in comments
