@@ -2419,8 +2419,7 @@ Sort by position if sort-method is 0. Sort by name if sort-method is 1."
       (sort menu (function (lambda (a b) (string< (car a) (car b))))))))
 
 ;; XEmacs addition
-;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.e\\'" . eiffel-mode))
+;;;###autoload(add-to-list 'auto-mode-alist '("\\.e\\'" . eiffel-mode))
 
 (provide 'eiffel)
 ;;; eiffel.el ends here
