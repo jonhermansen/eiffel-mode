@@ -279,7 +279,9 @@ at the end of STRING, we don't include a null substring for that."
 		     (or eif-run-command
 			 eif-compile-target
 			 (file-name-sans-extension
-			   (file-name-nondirectory (buffer-file-name))))))
+			  (if (eq system-type 'windows-nt) 
+			      buffer-file-name
+			    (file-name-nondirectory (buffer-file-name)))))))
 
   (let* ((tmp-buf (current-buffer))
 	 (words   (eif-split-string eif-run-command))
