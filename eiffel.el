@@ -1,6 +1,6 @@
 ;;; eiffel.el --- major mode for editing Eiffel files.
 
-;; Copyright (C) 1989, 1990, 93, 94, 95, 96, 99, 2000, 01, 02, 03
+;; Copyright (C) 1989, 1990, 93, 94, 95, 96, 99, 2000, 01, 02, 04
 ;;                         Tower Technology Corporation,
 ;;                         Free Software Foundation,
 ;;                         Bob Weiner,
@@ -8,7 +8,7 @@
 
 ;; Authors: 1989-1990 Stephen Omohundro, ISE and Bob Weiner
 ;;          1993-1996 Tower Technology Corporation
-;;          1999-2003 Martin Schwenke <martin@meltin.net>
+;;          1999-2004 Martin Schwenke <martin@meltin.net>
 ;; Maintainer: martin@meltin.net
 ;; Keywords: eiffel languages oop
 ;; Requires: font-lock, compile, easymenu, imenu
@@ -709,6 +709,10 @@ Does not include `is'.  See `eif-all-keywords'.")
 	  eif-constant-regexp)
   "RE to match a variable or constant declaration.")
 
+(defconst eif-id-colon-regexp
+  "[ \t]*[a-zA-Z0-9_]+[ \t]*:"
+  "Regexp that matches an Eiffel assertion tag expression.")
+
 (defconst eif-probably-feature-regexp
   (concat "\\(" eif-routine-begin-regexp
 	  "\\|" eif-attribute-regexp
@@ -781,7 +785,12 @@ This will also match local variable and parameter declarations.")
      (,(concat "^[ \t]*" eif-constant-regexp) (0 nil)
       ("\\s-*\\(\\<[A-Za-z][a-zA-Z_0-9]*\\)\\s-*\\(,\\|:.*\\)"
        (beginning-of-line) (end-of-line)
-       (1 font-lock-constant-face)))))
+       (1 font-lock-constant-face)))
+     (,(concat "^[ \t]*" eif-id-colon-regexp "\\($\\|[^=]\\)") (0 nil)
+      ("\\s-*\\(\\<[A-Za-z][a-zA-Z_0-9]*\\)\\s-*:"
+       (beginning-of-line) (end-of-line)
+       (1 font-lock-constant-face)))
+))
   "Regular expressions to use with font-lock mode and level 3 fontification.")
 
 (defconst eiffel-font-lock-keywords-4
@@ -1309,7 +1318,7 @@ line on that preceding line."
 
 	;; Record whether the line being indented begins with an "<id> :"
 	;; This is used in indenting assertion tag expressions.
-	(setq id-colon (looking-at "[ \t]*[a-zA-Z0-9_]+[ \t]*:"))
+	(setq id-colon (looking-at eif-id-colon-regexp))
 	
 	(forward-line -1)
 	(beginning-of-line)
@@ -1376,18 +1385,19 @@ line on that preceding line."
 		     ;; Else - some other kind of comment
 		     (setq indent (+ indent (eif-body-comment-indent-m))))
 		 ;; Else  the line being indented is not a comment
-		 (if (setq indent (eif-indent-assertion-continuation id-colon))
-		     indent
-		   ;; One of the ways of getting here is when we're
-		   ;; in a split line in an indexing clause.
-		   ;; Strings on their own need to be given some
-		   ;; extra indent.
-		   (if originally-looking-at-lone-string
-		       (if (looking-at "[ \t]*\"[^\"]*\"[ \t]*$")
-			   (setq indent (eif-current-line-indent))
-			 (setq indent (+ (eif-current-line-indent)
-					 eif-indent-increment)))
-		     (setq indent (eif-current-line-indent))))))
+		 ;; One of the ways of getting here is when we're
+		 ;; in a split line in an indexing clause.
+		 ;; Strings on their own need to be given some
+		 ;; extra indent.
+		 (if originally-looking-at-lone-string
+		     (if (looking-at "[ \t]*\"[^\"]*\"[ \t]*$")
+			 (setq indent (eif-current-line-indent))
+		       (setq indent (+ (eif-current-line-indent)
+				       eif-indent-increment)))
+		   (setq indent (eif-current-line-indent)))))
+	      ((and (looking-at eif-id-colon-regexp)
+		    (setq indent (eif-indent-assertion-continuation id-colon)))
+	       indent)
 	      ((setq indent (eif-manifest-array-start))
 	       indent)
 	      ;; OK, this is a sanity check, but it kills a minor
@@ -1447,7 +1457,6 @@ line on that preceding line."
 					 eif-indent-increment)))
 		     ;; Else the line preceding the line being indented is
 		     ;; also not a continuation line.
-		     
 		     (if (and (looking-at "[ \t]*\"[^\"]*\"[ \t]*$")
 			      (not originally-looking-at-lone-string))
 			 (setq indent (- (eif-current-line-indent)
@@ -1462,7 +1471,8 @@ line on that preceding line."
       (save-excursion
 	(forward-line -1)
 	(beginning-of-line)
-	(looking-at eif-operator-eol-regexp))))
+	(or (looking-at (concat eif-id-colon-regexp "\\($\\|[^=]\\)"))
+	    (looking-at eif-operator-eol-regexp)))))
 
 (defun eif-indent-assertion-continuation (id-colon)
   "Generally, are we in line that is a continuation of an assertion?
@@ -1490,7 +1500,7 @@ argument ID-COLON is t if the line we are indenting begins with
 That is, the current line is assumed to be a continuation of a
 multi-line assertion, and we return the required indentation."
   (save-excursion
-    (if (re-search-backward "ensure\\|require\\|variant\\|invariant" nil t)
+    (if (re-search-backward "ensure\\|require\\|variant\\|invariant\\|check" nil t)
 	(+ (eif-current-line-indent) eif-indent-increment)
       ;; This option should not occur
       (error "Could not find assertion tag"))))
