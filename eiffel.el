@@ -1,13 +1,13 @@
 ;;; eiffel-mode.el --- major mode for editing Eiffel files.
 
-;; Copyright (C) 1989, 1990, 1993, 1994, 1995, 1996, 1999, 2000
+;; Copyright (C) 1989, 1990, 1993, 1994, 1995, 1996, 1999, 2000, 2001
 ;;                         Tower Technology Corporation,
 ;;                         Free Software Foundation,
 ;;                         Martin Schwenke
 
 ;; Authors: 1989-1990 Stephen Omohundro, ISE and Bob Weiner
 ;;          1993-1996 Tower Technology Corporation
-;;          1999-2000 Martin Schwenke <martin@meltin.net>
+;;          1999-2001 Martin Schwenke <martin@meltin.net>
 ;; Maintainer: martin@meltin.net
 ;; Keywords: eiffel languages oop
 ;; Requires: font-lock, compile, easymenu
