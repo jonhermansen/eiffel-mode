@@ -715,11 +715,9 @@ indented properly, although lines containing certain class-level
 constructs do not require correct indentation of the preceding line."
   (let ((indent   0)
 	(line-end 0)
-	(originally-looking-at-comment nil)
-	(kw-match nil)
-	(continuation)
-	(id-colon))
-    
+	originally-looking-at-comment originally-looking-at-lone-string
+	kw-match continuation id-colon)
+
     (save-excursion
       
       ;; Save location of line-end and skip past leading white space.
@@ -730,6 +728,9 @@ constructs do not require correct indentation of the preceding line."
       
       ;; Is the line we are trying to indent a comment line?
       (setq originally-looking-at-comment (looking-at eif-comment-line-regexp))
+      
+      ;; Is the line we are trying to indent a lone string?
+      (setq originally-looking-at-lone-string (looking-at "\"[^\"]*\"[ \t]*$"))
       
       ;; Look for a keyword on the current line
       (if (looking-at eif-all-keywords-regexp)
@@ -861,7 +862,7 @@ constructs do not require correct indentation of the preceding line."
 	    ;; Move string continuation lines as per configuration.
 	    (if (looking-at "%")
 		(setq indent (+ indent (eif-string-continuation-indent-m))))
-	  
+
 	  ;; Else Find the first preceding line with non-comment source on it
 	  ;; that is not a continuation line of a multi-line parnethesized
 	  ;; expression.
@@ -936,7 +937,16 @@ constructs do not require correct indentation of the preceding line."
 		   ;; Else  the line being indented is not a comment
 		   (if (setq indent (eif-indent-assertion-continuation id-colon))
 		       indent
-		     (setq indent (eif-current-line-indent)))))
+		     ;; One of the ways of getting here is when we're
+		     ;; in a split line in an indexing clause.
+		     ;; Strings on their own need to be given some
+		     ;; extra indent.
+		     (if originally-looking-at-lone-string
+			 (if (looking-at "[ \t]*\"[^\"]*\"[ \t]*$")
+			     (setq indent (eif-current-line-indent))
+			   (setq indent (+ (eif-current-line-indent)
+					   eif-indent-increment)))
+		       (setq indent (eif-current-line-indent))))))
 		((setq indent (eif-manifest-array-start))
 		 indent)
 		((not (looking-at eif-all-keywords-regexp))
@@ -990,8 +1000,14 @@ constructs do not require correct indentation of the preceding line."
 			   (setq indent (- (eif-current-line-indent)
 					   eif-indent-increment)))
 		       ;; Else the line preceding the line being indented is
-		       ;; also not a continuation line. Use the current indent.
-		       (setq indent (eif-current-line-indent))))))))))
+		       ;; also not a continuation line.
+
+		       (if (and (looking-at "[ \t]*\"[^\"]*\"[ \t]*$")
+				(not originally-looking-at-lone-string))
+			   (setq indent (- (eif-current-line-indent)
+					   eif-indent-increment))
+			 ;; Else use the current indent.
+			 (setq indent (eif-current-line-indent)))))))))))
     indent))
 
 (defun eif-continuation-line ()
