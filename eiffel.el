@@ -306,7 +306,7 @@ Possibly used for error location.")
   "Compile an Eiffel root class."
   (interactive)
 
-  ;; Do the saved first, since the user might still have their hand on
+  ;; Do the save first, since the user might still have their hand on
   ;; the mouse.
   (save-some-buffers (not compilation-ask-about-save) nil)
 	 
@@ -1311,15 +1311,19 @@ does matching of parens ala \\[backward-sexp]'."
   "Put a `' around the current feature name."
   (interactive)
   (save-excursion
-    (backward-sexp)
+    ;; Only try to go back to the beginning of the feature if we're
+    ;; not already there.
+    (if (/= (point)
+	    (save-excursion
+	      (forward-sexp)
+	      (backward-sexp)
+	      (point)))
+	(backward-sexp))
     (insert "`")
     (forward-sexp)
     (insert "'"))
   (if (looking-at "'")
       (forward-char 1)))
-
-(defvar eiffel-mode-abbrev-table nil)
-(define-abbrev-table 'eiffel-mode-abbrev-table ())
 
 ;; ----------------------------------------------------------------------
 ;; This next portion of the file is derived from "eiffel.el"
@@ -1393,6 +1397,32 @@ does matching of parens ala \\[backward-sexp]'."
   (define-key eiffel-mode-map [(meta \')] 'eif-feature-quote)
   (define-key eiffel-mode-map [(meta q)] 'eif-fill-paragraph))
 
+(require 'easymenu)
+
+(defun eif-add-menu ()
+  "Add the \"Eiffel\" menu to the menu bar."
+
+  (easy-menu-define
+   eiffel-mode-menu
+   eiffel-mode-map
+   "Menu for eiffel-mode."
+   (append (list "Eiffel")
+	   (if eif-use-gnu-eiffel
+	       (list
+		["Compile..."            eif-compile t]
+		["Compiler Options..."   eif-set-compile-options t]
+		["Next Compile Error..." next-error  t]
+		["Run..."                eif-run     t]
+		["Short..."              eif-short   t]
+		["----------" nil nil]))
+	   (list
+	    ["Indent Construct"     eif-indent-construct t]
+	    ["----------" nil nil]
+	    (list "Comments"
+		  ["Feature Quote" eif-feature-quote  (eif-in-comment-p)]
+		  ["Fill         " eif-fill-paragraph (eif-in-comment-p)]))))
+  (easy-menu-add eiffel-mode-menu))
+
 ;;;###autoload
 (defun eiffel-mode ()
   "Major mode for editing Eiffel programs."
@@ -1415,6 +1445,7 @@ does matching of parens ala \\[backward-sexp]'."
     
 
   (use-local-map eiffel-mode-map)
+  (eif-add-menu)
   (set-syntax-table eiffel-mode-syntax-table)
 
   ;; Make local variables.
@@ -1430,41 +1461,18 @@ does matching of parens ala \\[backward-sexp]'."
   (make-local-variable 'comment-column)
   (make-local-variable 'comment-start-skip)
   ;; Now set their values.
-  (setq paragraph-start (concat "^$\\|" page-delimiter)
-	paragraph-separate paragraph-start
+  (setq paragraph-start              (concat "^$\\|" page-delimiter)
+	paragraph-separate           paragraph-start
 	paragraph-ignore-fill-prefix t
-	require-final-newline 'ask
-	parse-sexp-ignore-comments t
-	indent-line-function 'eif-indent-line
-	indent-region-function 'eif-indent-region
-	comment-start "-- "
-	comment-end ""
-	comment-column 32
-	comment-start-skip "--+ *")
+	require-final-newline        'ask
+	parse-sexp-ignore-comments   t
+	indent-line-function         'eif-indent-line
+	indent-region-function       'eif-indent-region
+	comment-start                "-- "
+	comment-end                  ""
+	comment-column               32
+	comment-start-skip           "--+ *")
 
-  (require 'easymenu)
-  (easy-menu-define
-   eiffel-mode-menu
-   eiffel-mode-map
-   "Menu for eiffel-mode."
-   (append (list "Eiffel")
-	   (if eif-use-gnu-eiffel
-	       (list
-		["Compile..."            eif-compile t]
-		["Compiler Options..."   eif-set-compile-options t]
-		["Next Compile Error..." next-error  t]
-		["Run..."                eif-run     t]
-		["Short..."              eif-short   t]
-		["----------" nil nil]))
-	   (list
-	    ["Indent Construct"     eif-indent-construct t]
-	    ["----------" nil nil]
-	    (list "Comments"
-		  ["Feature Quote" eif-feature-quote  (eif-in-comment-p)]
-		  ["Fill         " eif-fill-paragraph (eif-in-comment-p)]))))
-  (easy-menu-add eiffel-mode-menu)
-
-  (setq local-abbrev-table eiffel-mode-abbrev-table)
   (setq auto-fill-function 'eif-auto-fill)
   (run-hooks 'eiffel-mode-hook))
 
