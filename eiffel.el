@@ -744,8 +744,8 @@ function as more than one type of keyword.")
   "Keywords that may cause the indentation of an `eif-control-flow-keyword'.
 If these occur prior to an `eif-control-flow-keyword' then the
 `eif-control-flow-keyword' is indented.  Note that technically, `end'
-is part of this list but it is handled separately in the functions
-\[eif-matching-indent\] and \[eif-matching-kw\].")
+is part of this list but it is handled separately in the function
+\[eif-matching-kw\].")
 
 (defconst eif-check-keyword "check"
   "The `check' keyword.")
@@ -758,9 +758,8 @@ is part of this list but it is handled separately in the functions
   "Keywords that may cause the indentation of an `eif-check-keyword'.
 If these occur prior to an `eif-check-keyword' then the
 `eif-check-keyword' is indented.  Note that technically, `end' is part
-of this list but it is handled separately in the functions
-\[eif-matching-indent\] and \[eif-matching-kw\].  See also
-`eif-control-flow-matching-keywords'.")
+of this list but it is handled separately in the function
+\[eif-matching-kw\].  See also `eif-control-flow-matching-keywords'.")
 
 (defconst eif-rescue-keyword "rescue"  "The `rescue' keyword.")
 
@@ -774,9 +773,8 @@ of this list but it is handled separately in the functions
   "Keywords that may cause the indentation of an `eif-rescue-keyword'.
 If these occur prior to an `eif-rescue-keyword' then the
 `eif-rescue-keyword' is indented.  Note that technically, `end' is
-part of this list but it is handled separately in the functions
-\[eif-matching-indent\] and \[eif-matching-kw\].  See also
-`eif-control-flow-matching-keywords'.")
+part of this list but it is handled separately in the function
+\[eif-matching-kw\].  See also `eif-control-flow-matching-keywords'.")
 
 (defconst eif-from-level-keywords
   "\\(until\\|variant\\|loop\\)[^a-z0-9_]"
@@ -800,7 +798,7 @@ part of this list but it is handled separately in the functions
 If one of these occur prior to an `eif-then-keyword' then this sets
 the indentation of the `eif-then-keyword'.  Note that technically,
 `end' is part of this list but it is handled separately in the
-functions \[eif-matching-indent\] and \[eif-matching-kw\].  See also
+function \[eif-matching-kw\].  See also
 `eif-control-flow-matching-keywords'.")
 
 (defconst eif-invariant-keyword "invariant" "The `invariant' keyword.")
@@ -810,9 +808,8 @@ functions \[eif-matching-indent\] and \[eif-matching-kw\].  See also
   "Keywords that may cause the indentation of an `eif-invarient-keyword'.
 If one of these occurs prior to an `eif-invariant-keyword' then the
 `eif-invariant-keyword' is indented.  Note that technically, `end' is
-part of this list but it is handled separately in the functions
-\[eif-matching-indent\] and \[eif-matching-kw\].  See also
-`eif-control-flow-matching-keywords'.")
+part of this list but it is handled separately in the function
+\[eif-matching-kw\].  See also `eif-control-flow-matching-keywords'.")
 
 (defconst eif-obsolete-matching-keywords
   "\\(is\\|class\\)"
@@ -988,12 +985,12 @@ constructs do not require correct indentation of the preceding line."
 		   (setq indent eif-matching-indent)))
 		((looking-at eif-solitary-then-keyword)
 		 ;; Handles case where "then" appears on a line by itself
-		 ;;   (Indented to the level of the matching if, elseif or when)
-		 (setq indent (+ (eif-matching-indent eif-then-matching-keywords)
-				 (eif-then-indent-m))))
+		 ;;   (Indented to level of the matching if, elseif or when)
+		 (eif-matching-kw eif-then-matching-keywords)
+		 (setq indent (+ eif-matching-indent (eif-then-indent-m))))
 		((looking-at eif-invariant-keyword)
 		 ;; Invariant keyword
-		 ;;   (Indented to the level of the matching from or feature)
+		 ;;   (Indented to level of the matching from or feature)
 		 (if (string-match "from"
 				   (eif-matching-kw eif-invariant-matching-keywords))
 		     ;; Then - loop invariant
@@ -1207,36 +1204,6 @@ multi-line assertion, and we return the required indentation."
       ;; This option should not occur
       (error "Could not find assertion tag"))))
 
-(defun eif-matching-indent (matching-keyword-regexp)
-  "Search backwards for a keyword in MATCHING-KEYWORD-REGEXP.
-Return the indentation of the keyword found.  If an `end' keyword
-occurs prior to finding one of the keywords in MATCHING-KEYWORD-REGEXP
-and it terminates a check clause, return the indentation of the `end'
-minus the value of `eif-check-keyword-indent'."
-  (let ((search-regexp (concat "[^a-z0-9A-Z_]"
-			       eif-end-keyword
-			       "[^a-z0-9A-Z_]\\|[^a-z0-9A-Z_]"
-			       matching-keyword-regexp))
-	(indent 0)
-	(continue t))
-    (save-excursion
-      (while (and (re-search-backward search-regexp 1 t)
-		  (eif-in-comment-or-quoted-string-p)))
-      (if (looking-at search-regexp)
-	  ;; Then
-	  (if (and (looking-at eif-end-keyword-regexp)
-		   (eif-matching-line)
-		   (string-match eif-check-keyword eif-matching-kw-for-end))
-	      ;; The keyword "end" was found that terminated a "check" clause
-	      (setq indent (- (eif-current-line-indent)
-			      (eif-check-keyword-indent-m)))
-	    ;; Else a keyword in "matching-keyword-regexp" or a normal
-	    ;; "end"was found
-	    (setq indent (eif-current-line-indent)))
-	;; Else
-	(message "No matching indent keyword was found"))
-      indent)))
-
 (defun eif-matching-kw (matching-keyword-regexp)
   "Search backwards for a keyword in MATCHING-KEYWORD-REGEXP.
 Return the keyword found.  Also set the value of variable
@@ -1252,8 +1219,7 @@ value of variable `eif-matching-indent' to the indentation of the
 	(keyword ""))
     (save-excursion
       ;; Search backward for a matching keyword.
-      (while (and (re-search-backward search-regexp 1 t)
-		  (eif-in-comment-or-quoted-string-p)))
+      (eif-re-search-backward search-regexp 1 t)
       (if (looking-at search-regexp)
 	  ;; Then - a keyword was found
 	  (progn
@@ -1263,8 +1229,8 @@ value of variable `eif-matching-indent' to the indentation of the
 		     (eif-matching-line)
 		     (string-match eif-check-keyword eif-matching-kw-for-end))
 		;; Then
-		(setq eif-matching-indent
-		      (- (eif-current-line-indent) (eif-check-keyword-indent-m)))
+		(setq eif-matching-indent (- (eif-current-line-indent)
+					     (eif-check-keyword-indent-m)))
 	      ;; Else
 	      (setq eif-matching-indent (eif-current-line-indent))))
 	;; Else no keyword was found.  I think this is an error
