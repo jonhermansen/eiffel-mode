@@ -302,31 +302,32 @@ Possibly used for error location.")
 (defvar eif-run-command nil
   "Current command to run after Eiffel compile.")
 
+(require 'compile)
 (defun eif-compile ()
   "Compile an Eiffel root class."
   (interactive)
-  (let ((temp (and (boundp 'last-nonmenu-event)
-		   last-nonmenu-event)))
+
+  ;; Do the saved first, since the user might still have their hand on
+  ;; the mouse.
+  (save-some-buffers (not compilation-ask-about-save) nil)
 	 
-    (setq eif-compile-dir (file-name-directory (buffer-file-name)))
-    (setq eif-compile-target
-	  (file-name-sans-extension
-	   (read-string "Name of root class: "
-			(or eif-compile-target
-			    (file-name-sans-extension
-			     (file-name-nondirectory (buffer-file-name)))))))
-    (setq eif-root-proc
-	  (read-string "Name of root procedure: "
-		       eif-root-proc))
-    (let* ((cmd (concat eif-compile-command
-			" "    eif-compile-options
-			" -o " eif-compile-target
-			(if (eq system-type 'windows-nt) ".exe")
-			" "    eif-compile-target
-			" "    eif-root-proc))
-	   (last-nonmenu-event temp)
-	   (compilation-read-command nil))
-      (compile cmd))))
+  (setq eif-compile-dir (file-name-directory (buffer-file-name)))
+  (setq eif-compile-target
+	(file-name-sans-extension
+	 (read-string "Name of root class: "
+		      (or eif-compile-target
+			  (file-name-sans-extension
+			   (file-name-nondirectory (buffer-file-name)))))))
+  (setq eif-root-proc
+	(read-string "Name of root procedure: "
+		     eif-root-proc))
+  (let ((cmd (concat eif-compile-command
+		     " "    eif-compile-options
+		     " -o " eif-compile-target
+		     (if (eq system-type 'windows-nt) ".exe")
+		     " "    eif-compile-target
+		     " "    eif-root-proc)))
+    (compile-internal cmd "No more errors")))
 
 (defun eif-set-compile-options ()
   "Set Eiffel compiler options."
@@ -388,7 +389,6 @@ at the end of STRING, we don't include a null substring for that."
     (switch-to-buffer tmp-buf)
     (switch-to-buffer-other-window (concat "*" cmd "*"))))
 
-(require 'compile)
 ;; The description part of an error can be more than 1 line long.  We
 ;; make the gross assumption that it can't be spread over more than 3
 ;; lines.
