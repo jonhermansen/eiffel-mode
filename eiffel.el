@@ -324,7 +324,9 @@ Possibly used for error location.")
   "Hook function to set local value for `compilation-error-screen-columns'.
 This should be nil for SmallEiffel compiles, because column positions are
 returned as character positions rather than screen columns."
-  (make-local-variable 'compilation-error-screen-columns)
+  ;; In Emacs > 20.7 compilation-error-screen-columns is buffer local.
+  (or (assq 'compilation-error-screen-columns (buffer-local-variables))
+      (make-local-variable 'compilation-error-screen-columns))
   (setq compilation-error-screen-columns nil))
 
 (defun eif-compile ()
@@ -419,7 +421,9 @@ at the end of STRING, we don't include a null substring for that."
 ;; references to multiple locations.  Thanks to Andreas
 ;; <nozone@sbox.tu-graz.ac.at>. Also, the column number is a character
 ;; count rather than a screen column, so we need to make sure that
-;; compilation-error-screen-columns is nil.
+;; compilation-error-screen-columns is nil.  Note that in XEmacs this
+;; variable doesn't exist, so we end up in the wrong column.  Hey, at
+;; least we're on the correct line!
 (add-to-list 'compilation-error-regexp-alist
 	     '("^Line \\([0-9]+\\) column \\([0-9]+\\) in [^ ]+ (\\([^)]+\\))" 3 1 2))
 
