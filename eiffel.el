@@ -587,6 +587,10 @@ Returns the same thing as \\[compile-internal] - the compilation buffer."
   '(+ (* eif-string-continuation-indent eif-indent-increment)
       eif-extra-string-continuation-indent))
 
+(defmacro eif-preprocessor-indent-m ()
+  "Indentation amount for a preprocessor statement (in number of spaces)."
+  '(* eif-preprocessor-indent eif-indent-increment))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;          Keyword Regular Expression Constants.               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -789,7 +793,8 @@ See `eif-indentation-keywords'.")
 See `eif-operator-keywords'.")
 
 (defconst eif-operator-eol-regexp
-  ".*\\([@*/+-]\\|\\<and\\|\\<or\\|\\<implies\\|:=\\)[ \t]*\\(--.*\\)?$"
+  (concat ".*\\([@*/+-]\\|\\<\\(" eif-operator-keywords
+	  "\\)\\|:=\\)[ \t]*\\(--.*\\)?$")
   "Eiffel operators - used to identify continuation lines.")
 
 (defconst eif-misc-keywords
@@ -797,12 +802,14 @@ See `eif-operator-keywords'.")
 	  "old\\|precursor\\|prefix\\|strip\\|unique\\|xor")
   "Eiffel miscellaneous keywords.")
 
-(defconst eif-preprocessor-regexp
-  "#\\(define\\|undefine\\|ifdef\\|else\\|endif\\|ifndef\\|include\\)[ \t]"
+(defconst eif-preprocessor-keywords
+  "#\\(define\\|undefine\\|ifdef\\|else\\|endif\\|ifndef\\|include\\)"
   "Eiffel GOBO preprocessor keywords.")
 
-(defvar eif-indent-preprocessor-directives-flag nil
-  "*Non-nil means preprocessor directives should be indented specially.")
+(defconst eif-preprocessor-keywords-regexp
+  (eif-post-anchor eif-preprocessor-keywords)
+  "Eiffel GOBO preprocessor keywords, with context.
+See `eif-preprocessor-keywords'.")
 
 (defconst eif-smarteiffel-guru-keywords
   (concat "c_inline_c\\|c_inline_h\\|to_pointer" "\\|"
@@ -822,7 +829,9 @@ See `eif-operator-keywords'.")
   "Eiffel keywords representing standard classes.")
 
 (defconst eif-all-keywords
-  (concat eif-indentation-keywords "\\|" "then\\|end")
+  (concat eif-indentation-keywords    "\\|"
+	  eif-preprocessor-keywords   "\\|"
+	  "then\\|end")
   "Regexp matching (nearly) any eiffel keyword in a line.
 Does not include `is'.")
 
@@ -904,14 +913,15 @@ This will also match local variable and parameter declarations.")
       0 font-lock-keyword-face nil)
      ;; assertions
      (,(eif-anchor "check\\|ensure then\\|ensure\\|invariant\\|require else\\|require\\|variant") 2 font-lock-reference-face nil)
+     (,(eif-anchor eif-preprocessor-keywords) 3 font-lock-builtin-face nil)
      ;; Minor keywords: the first 4 can appear in conjunction with
      ;; other keywords, and the anchored regexp doesn't cater for
      ;; overlaps.
-     (,(eif-anchor "is") 2 font-lock-keyword-face nil)
+     (,(eif-anchor "is")                  2 font-lock-keyword-face nil)
      (,(eif-anchor eif-operator-keywords) 2 font-lock-keyword-face nil)
-     (,(eif-anchor "not") 2 font-lock-keyword-face nil)
-     (,(eif-anchor eif-misc-keywords) 2 font-lock-keyword-face nil)
-     (,(eif-anchor eif-all-keywords) 2 font-lock-keyword-face nil)
+     (,(eif-anchor "not")                 2 font-lock-keyword-face nil)
+     (,(eif-anchor eif-misc-keywords)     2 font-lock-keyword-face nil)
+     (,(eif-anchor eif-all-keywords)      2 font-lock-keyword-face nil)
      ;; quoted expr's in comments
      ("`[^`'\n]*'" 0 font-lock-string-face t)
      ;; classes
@@ -1117,7 +1127,9 @@ constructs do not require correct indentation of the preceding line."
 		     ;; Then - feature obsolete
 		     (setq indent (eif-feature-level-kw-indent-m))
 		   ;; Else - class obsolete
-		   (setq indent (eif-class-level-kw-indent-m)))))
+		   (setq indent (eif-class-level-kw-indent-m))))
+		((looking-at eif-preprocessor-keywords)
+		 (setq indent (eif-preprocessor-indent-m))))
 
 	;; Else no keyword on current line,
 	;;   are we in a multi-line parenthesis expression
@@ -1133,7 +1145,7 @@ constructs do not require correct indentation of the preceding line."
 
 	  ;; Else Find the first preceding line with non-comment source on it
 	  ;; that is not a continuation line of a multi-line parnethesized
-	  ;; expression.
+	  ;; expression (and isn't a preprocessor line :-).
 
 	  ;; Record whether this line begins with an operator.  We assume
 	  ;; that the line is a continuation line if it begins with an operator
@@ -1149,7 +1161,9 @@ constructs do not require correct indentation of the preceding line."
 
 	  (forward-line -1)
 	  (beginning-of-line)
-	  (while (and (looking-at eif-non-source-line) (not (= (point) 1)))
+	  (while (and (or (looking-at eif-non-source-line)
+			  (looking-at eif-preprocessor-keywords-regexp))
+		      (not (= (point) 1)))
 	    (forward-line -1)
 	    (beginning-of-line))
 	  (if (eif-line-contains-close-paren)
