@@ -9,7 +9,6 @@
 ;;          1993-1996 Tower Technology Corporation
 ;;          1999-2000 Martin Schwenke <martins@linuxcare.com>
 ;; Maintainer: martins@linuxcare.com
-;; Version: $Id$
 ;; Keywords: eiffel languages oop
 ;; Requires: font-lock, compile, easymenu
 
@@ -65,6 +64,14 @@
 (require 'font-lock)
 (require 'compile)
 (require 'easymenu)
+
+(defconst eiffel-mode-version-string
+  "$Id$"
+  "Version string to make reporting bugs more meaningful.
+Note that if this file becomes part of GNU Emacs then the file might
+be changed by the Emacs maintainers without this version number
+changing.  This means that if you are reporting a bug for a version
+that was shipped with Emacs, you should report the Emacs version!")
 
 (defgroup eiffel nil
   "Eiffel mode for Emacs"
@@ -313,6 +320,13 @@ Possibly used for error location.")
 (defvar eif-run-command nil
   "Current command to run after Eiffel compile.")
 
+(defun eif-compilation-mode-hook ()
+  "Hook function to set local value for `compilation-error-screen-columns'.
+This should be nil for SmallEiffel compiles, because column positions are
+returned as character positions rather than screen columns."
+  (make-local-variable 'compilation-error-screen-columns)
+  (setq compilation-error-screen-columns nil))
+
 (defun eif-compile ()
   "Compile an Eiffel root class."
   (interactive)
@@ -336,7 +350,9 @@ Possibly used for error location.")
 		     " -o " eif-compile-target
 		     (if (eq system-type 'windows-nt) ".exe")
 		     " "    eif-compile-target
-		     " "    eif-root-proc)))
+		     " "    eif-root-proc))
+	(compilation-mode-hook (cons 'eif-compilation-mode-hook
+				     compilation-mode-hook)))
     (compile-internal cmd "No more errors")))
 
 (defun eif-set-compile-options ()
@@ -399,11 +415,13 @@ at the end of STRING, we don't include a null substring for that."
     (switch-to-buffer tmp-buf)
     (switch-to-buffer-other-window (concat "*" cmd "*"))))
 
-;; The description part of an error can be more than 1 line long.  We
-;; make the gross assumption that it can't be spread over more than 3
-;; lines.
+;; This has been loosened up to spot parts of messages that contain
+;; references to multiple locations.  Thanks to Andreas
+;; <nozone@sbox.tu-graz.ac.at>. Also, the column number is a character
+;; count rather than a screen column, so we need to make sure that
+;; compilation-error-screen-columns is nil.
 (add-to-list 'compilation-error-regexp-alist
-	     '("\\*+ \\(Fatal.Error\\|Warning\\).*\n?.*\n?.*\nLine \\([0-9]+\\) column \\([0-9]+\\) in [^ ]+ (\\([^)]+\\))" 4 2))
+	     '("^Line \\([0-9]+\\) column \\([0-9]+\\) in [^ ]+ (\\([^)]+\\))" 3 1 2))
 
 (defun eif-short ()
   "Display the short form of an Eiffel class."
