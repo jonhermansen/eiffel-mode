@@ -1,28 +1,18 @@
 ;;; eiffel-mode.el --- major mode for editing Eiffel files.
 
-;; Copyright (C) 1989, 1990, 1993, 1994, 1995, 1996, 1999, 2000, 2001
+;; Copyright (C) 1989, 1990, 1993, 1994, 1995, 1996, 1999, 2000, 2001, 2002
 ;;                         Tower Technology Corporation,
 ;;                         Free Software Foundation,
-;;                         Martin Schwenke,
 ;;                         D. Colnet, C. Adrian
 
 ;; Authors: 1989-1990 Stephen Omohundro, ISE and Bob Weiner
 ;;          1993-1996 Tower Technology Corporation
-;;          1999-2001 Martin Schwenke <martin@meltin.net>
+;;          1999-2002 Martin Schwenke <martin@meltin.net>
 ;; Maintainer: martin@meltin.net
 ;; Keywords: eiffel languages oop
 ;; Requires: font-lock, compile, easymenu
 
 ;; This file is derived from eiffel4.el from Tower Technology Corporation.
-;;
-;; Martin Schwenke did these things:
-;;
-;; * Simplified the font-lock support to use standard GNU Emacs
-;;   font-lock faces.
-;; * Added the compilation support for GNU Eiffel.
-;; * Added the menu.
-;; * Fixed the documentation and added customisation support.
-;; * Simplified various bits of code.
 ;;
 ;; Known bugs:
 ;;
@@ -1079,8 +1069,7 @@ minus the value of `eif-check-keyword-indent'."
 	(continue t))
     (save-excursion
       (while (and (re-search-backward search-regexp 1 t)
-		  (or (eif-in-quoted-string-p)
-		      (eif-in-comment-p))))
+		  (eif-in-comment-or-quoted-string-p)))
       (if (looking-at search-regexp)
 	  ;; Then
 	  (if (and (looking-at eif-end-keyword-regexp)
@@ -1112,8 +1101,7 @@ value of variable `eif-matching-indent' to the indentation of the
     (save-excursion
       ;; Search backward for a matching keyword.
       (while (and (re-search-backward search-regexp 1 t)
-		  (or (eif-in-quoted-string-p)
-		      (eif-in-comment-p))))
+		  (eif-in-comment-or-quoted-string-p)))
       (if (looking-at search-regexp)
 	  ;; Then - a keyword was found
 	  (progn
@@ -1215,11 +1203,10 @@ of the syntactic construct containing the point."
 		 (beginning-of-line) ;; So we wont see keywords on this line.
 		 (setq nesting-level -1))
 		((and (re-search-forward eif-opening-regexp search-end t)
-		      (not (or (eif-in-quoted-string-p)
-			       (eif-in-comment-p))))
+		      (eif-not-in-comment-or-quoted-string-p))
 		 (setq match-start (match-beginning 0))
 		 (goto-char match-start)
-		 (if (not (or (eif-in-quoted-string-p) (eif-in-comment-p)))
+		 (if (eif-not-in-comment-or-quoted-string-p)
 		     (setq nesting-level 1))
 		 (setq opening-keyword
 		       (cons (buffer-substring match-start (match-end 0))
@@ -1227,10 +1214,9 @@ of the syntactic construct containing the point."
 		 (goto-char (match-end 0)))
 		((and (progn (beginning-of-line) t)
 		      (re-search-forward eif-closing-regexp search-end t)
-		      (not (or (eif-in-quoted-string-p)
-			       (eif-in-comment-p))))
+		      (eif-not-in-comment-or-quoted-string-p))
 		 (goto-char (match-beginning 0))
-		 (if (not (or (eif-in-quoted-string-p) (eif-in-comment-p)))
+		 (if (eif-not-in-comment-or-quoted-string-p)
 		     (setq nesting-level -1))))
 	  ;; Perform the search
 	  (while (not (= nesting-level 0))
@@ -1240,14 +1226,14 @@ of the syntactic construct containing the point."
 			    (goto-char (setq match-start (match-beginning 0)))
 			    (setq match-end   (match-end 0))
 			    (setq success t)
-			    (or (eif-in-quoted-string-p) (eif-in-comment-p)))
+			    (eif-in-comment-or-quoted-string-p))
 		  (goto-char match-end)
 		  (setq success nil))
 	      ;; Else search backward for the next keyword not in a comment
 	      (while (and (re-search-backward eif-opening-or-closing-regexp nil 1)
 			  (goto-char (setq match-start (match-beginning 0)))
 			  (setq success t)
-			  (or (eif-in-quoted-string-p) (eif-in-comment-p)))
+			  (eif-in-comment-or-quoted-string-p))
 		(setq success nil)))
 	    (cond ((and (looking-at eif-opening-regexp) success)
 		   ;; Found an opening keyword
@@ -1579,22 +1565,42 @@ compilation and indentation variables that can be customized."
   (setq auto-fill-function 'eif-auto-fill)
   (run-hooks 'eiffel-mode-hook))
 
-(defun eif-in-comment-p ()
+(defun eif-not-in-comment-or-quoted-string-p ()
+  "Return t if point is not in a comment or quoted string."
+  (not eif-in-comment-or-quoted-string-p))
+  
+(defun eif-in-comment-or-quoted-string-p ()
+  "Return t if point is in a comment or quoted string."
+  (or (eif-in-comment-p)
+      (eif-in-quoted-string-p)))
+  
+
+;; This doesn't match when you're on the comment delimiter.  Does it
+;; matter?
+(defsubst eif-in-comment-p ()
   "Return t if point is in a comment."
-  (let ((pos (point))
-	(eol (save-excursion (end-of-line) (point))))
-    (save-excursion
-      (beginning-of-line)
-      (let ((bol (point)))
-	;; Skip things that look like comments but are in a string.
-	(while (and (re-search-forward comment-start-skip eol t)
-		    ;; Avoid corner case: -- "blah"
-		    (progn (backward-char 1) t)
-		    (eif-in-quoted-string-p)))
-	;; Now go back and find that comment, if there was one.
-	(and (re-search-backward comment-start-skip bol t)
-	     (>= pos (point))
-	     (not (eif-in-quoted-string-p)))))))
+  (interactive)
+  (save-excursion
+    (nth 4 (parse-partial-sexp
+	    (save-excursion (beginning-of-line) (point))
+	    (point)))))
+
+;; (defun eif-in-comment-p ()
+;;   "Return t if point is in a comment."
+;;   (let ((pos (point))
+;; 	(eol (save-excursion (end-of-line) (point))))
+;;     (save-excursion
+;;       (beginning-of-line)
+;;       (let ((bol (point)))
+;; 	;; Skip things that look like comments but are in a string.
+;; 	(while (and (re-search-forward comment-start-skip eol t)
+;; 		    ;; Avoid corner case: -- "blah"
+;; 		    (progn (backward-char 1) t)
+;; 		    (eif-in-quoted-string-p)))
+;; 	;; Now go back and find that comment, if there was one.
+;; 	(and (re-search-backward comment-start-skip bol t)
+;; 	     (>= pos (point))
+;; 	     (not (eif-in-quoted-string-p)))))))
 
 ;; ENHANCEME: Currently eif-beginning-of-feature only works for
 ;;            routines (`is' is crucial).  It should be made more
@@ -1638,7 +1644,7 @@ Returns t unless search stops due to beginning or end of buffer."
       (if (re-search-backward eif-is-keyword-regexp nil 'move
 			      (if (> arg 0) 1 -1))
 	  ;; If we found one, count it and keep moving.
-	  (if (not (or (eif-in-quoted-string-p) (eif-in-comment-p)))
+	  (if (eif-not-in-comment-or-quoted-string-p)
 	      (progn
 		(if (> arg 0)
 		    (setq arg (1- arg))
@@ -1662,8 +1668,7 @@ Assumes point is at the beginning of the feature."
                          nil 'move)
       (backward-char 1)         ; matching eif-end-matching-keywords
                                 ; takes us one char to far
-      (if (not (or (eif-in-comment-p)
-                   (eif-in-quoted-string-p)))
+      (if (eif-not-in-comment-or-quoted-string-p)
           ;; After a level changing keyword.
           (save-excursion
             (backward-word 1)
