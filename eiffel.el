@@ -272,6 +272,11 @@ relative to indent of previous line."
   :type 'boolean
   :group 'eiffel-indent)
 
+(defcustom eif-set-tab-width-flag t
+  "*If non-nil `tab-width' is set to `eif-indent-increment' in eiffel-mode."
+  :type 'boolean
+  :group 'eiffel-indent)
+
 ;;
 ;; Compilation support for GNU SmallEiffel.
 ;; 
@@ -448,7 +453,7 @@ at the end of STRING, we don't include a null substring for that."
 ;; variable doesn't exist, so we end up in the wrong column.  Hey, at
 ;; least we're on the correct line!
 (add-to-list 'compilation-error-regexp-alist
-	     '("^Line \\([0-9]+\\) column \\([0-9]+\\) in [^ ]+ (\\([^)]+\\))" 3 1 2))
+	     '("^Line \\([0-9]+\\) column \\([0-9]+\\) in [^ ]+ (\\([^)]+\\.[Ee]\\))" 3 1 2))
 
 (defun eif-short ()
   "Display the short form of an Eiffel class."
@@ -1552,6 +1557,9 @@ compilation and indentation variables that can be customized."
 	comment-column               32
 	comment-start-skip           "--+ *"
 	font-lock-defaults           eiffel-font-lock-defaults)
+
+  (if eif-set-tab-width-flag
+      (setq tab-width eif-indent-increment))
 
   (setq auto-fill-function 'eif-auto-fill)
   (run-hooks 'eiffel-mode-hook))
