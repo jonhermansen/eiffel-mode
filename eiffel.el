@@ -1558,7 +1558,7 @@ compilation and indentation variables that can be customized."
 	comment-start                "-- "
 	comment-end                  ""
 	comment-column               32
-	comment-start-skip           "--+ *"
+	comment-start-skip           "--+[ \t]*"
 	font-lock-defaults           eiffel-font-lock-defaults)
 
   (if eif-set-tab-width-flag
@@ -1840,7 +1840,16 @@ Comments that are not the only thing on a line return nil as their prefix."
 		(setq para-end (point))
 	      (beginning-of-line)
 	      (setq para-end (point)))
-	    (fill-region para-begin para-end))))))
+	    ;; Avert eyes now - gross hack follows...  how big can an
+	    ;; Eiffel comment be anyway?  :-)
+	    (let ((orig-region (buffer-substring para-begin para-end))
+		  (orig-state  (buffer-modified-p))
+		  (ret  (fill-region para-begin para-end)))
+	      (and (<= para-end (point-max))
+		   (string-equal
+		    orig-region (buffer-substring para-begin para-end))
+		   (set-buffer-modified-p orig-state))
+	      ret))))))
 
 (defun eif-indent-line (&optional whole-exp)
   "Indent the current line as Eiffel code.
