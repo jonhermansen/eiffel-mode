@@ -11,7 +11,7 @@
 ;;          1999-2003 Martin Schwenke <martin@meltin.net>
 ;; Maintainer: martin@meltin.net
 ;; Keywords: eiffel languages oop
-;; Requires: font-lock, compile, easymenu
+;; Requires: font-lock, compile, easymenu, imenu
 
 ;; This file is derived from eiffel4.el from Tower Technology Corporation.
 ;;
@@ -64,6 +64,7 @@
 (require 'font-lock)
 (require 'compile)
 (require 'easymenu)
+(require 'imenu)
 
 (defconst eiffel-version-string
   "$Id$"
@@ -294,10 +295,6 @@ big number to enable it for all paragraphs."
   :type 'integer
   :group 'eiffel-indent)
 
-;;
-;; Compilation support for GNU SmartEiffel.
-;;
-
 (defcustom eif-use-gnu-eiffel t
   "*If t include support for compilation using GNU SmartEiffel."
   :type 'boolean
@@ -326,202 +323,6 @@ in Debian GNU/Linux, when the default value is \"se-compile\"."
 ;;
 ;; No user-customizable definitions below this point.
 ;;
-
-(defvar eif-compile-dir nil
-  "Current directory where Eiffel compilations are taking place.
-Possibly used for error location.")
-
-(defvar eif-root-class nil
-  "Current Eiffel root class being compiled/debugged.")
-
-(defvar eif-compile-target nil
-  "Current Eiffel compilation target.")
-
-(defvar eif-debug-target nil
-  "Current Eiffel debug target.")
-
-(defvar eif-root-proc "make"
-  "Current Eiffel root procedure.")
-
-(defvar eif-run-command nil
-  "Current command to run after Eiffel compile.")
-
-(defvar eif-debug-command nil
-  "Current debug command to run after Eiffel debug compile.")
-
-(defun eif-compilation-mode-hook ()
-  "Hook function to set local value for `compilation-error-screen-columns'.
-This should be nil for SmartEiffel compiles, because column positions are
-returned as character positions rather than screen columns."
-  ;; In Emacs > 20.7 compilation-error-screen-columns is buffer local.
-  (or (assq 'compilation-error-screen-columns (buffer-local-variables))
-      (make-local-variable 'compilation-error-screen-columns))
-  (setq compilation-error-screen-columns nil))
-
-(defun eif-compile ()
-  "Compile an Eiffel root class."
-  (interactive)
-  (eif-compile-prompt)
-  (eif-compile-internal))
-
-(defun eif-set-compile-options ()
-  "Set Eiffel compiler options."
-  (interactive)
-  (setq eif-compile-options
-	(read-string "Eiffel compiler options: " eif-compile-options)))
-
-;; Taken from Emacs 20.3 subr.el (just in case we're running under Emacs 19).
-(defun eif-split-string (string &optional separators)
-  "Split STRING into substrings separated by SEPARATORS.
-Each match for SEPARATORS is a splitting point.  The substrings
-between the splitting points are made into a list which is returned.
-If SEPARATORS is absent, it defaults to \"[ \\f\\t\\n\\r\\v]+\".
-
-If there is match for SEPARATORS at the beginning of STRING, we do not
-include a null substring for that.  Likewise, if there is a match
-at the end of STRING, we do not include a null substring for that."
-  (let ((rexp (or separators "[ \f\t\n\r\v]+"))
-	(start 0)
-	notfirst
-	(list nil))
-    (while (and (string-match rexp string
-			      (if (and notfirst
-				       (= start (match-beginning 0))
-				       (< start (length string)))
-				  (1+ start) start))
-		(< (match-beginning 0) (length string)))
-      (setq notfirst t)
-      (or (eq (match-beginning 0) 0)
-	  (and (eq (match-beginning 0) (match-end 0))
-	       (eq (match-beginning 0) start))
-	  (setq list
-		(cons (substring string start (match-beginning 0))
-		      list)))
-      (setq start (match-end 0)))
-    (or (eq start (length string))
-	(setq list
-	      (cons (substring string start)
-		    list)))
-    (nreverse list)))
-
-(defun eif-run ()
-  "Run a compiled Eiffel program."
-  (interactive)
-  (setq eif-run-command
-	(read-string "Command to run: "
-		     (or eif-run-command
-			 eif-compile-target
-			 (file-name-sans-extension
-			  (if (eq system-type 'windows-nt)
-			      buffer-file-name
-			    (file-name-nondirectory (buffer-file-name)))))))
-  (eif-run-internal))
-
-(defun eif-debug ()
-  "Run the SmartEiffel debugger."
-  (interactive)
-
-  (eif-compile-prompt)
-  
-  (setq eif-debug-target
-	(file-name-sans-extension
-	 (read-string "Debug target name: "
-		      (or eif-debug-target
-			  (concat eif-compile-target "_debug")))))
-    
-  (let* ((eif-compile-options (concat "-trace " eif-compile-options))
-	 (eif-compile-target eif-debug-target)
-	 (buff (eif-compile-internal))
-	 (proc (get-buffer-process buff)))
-
-    ;; This works under GNU Emacs, but hangs under at least some
-    ;; versions of XEmacs if there is input pending.
-    (while (eq (process-status proc) 'run)
-      (sit-for 1))
-
-    (if (= (process-exit-status proc) 0)
-	(progn
-	  (setq eif-debug-command
-		(read-string "Debugger command to run: "
-			     (or eif-debug-command
-				 eif-debug-target
-				 (file-name-sans-extension
-				  (if (eq system-type 'windows-nt)
-				      buffer-file-name
-				    (file-name-nondirectory
-				     (buffer-file-name)))))))
-	  (let ((eif-run-command eif-debug-command))
-	    (eif-run-internal))))))
-
-(defun eif-compile-prompt ()
-  "Prompt for information required to compile an Eiffel root class."
-
-  ;; Do the save first, since the user might still have their hand on
-  ;; the mouse.
-  (save-some-buffers (not compilation-ask-about-save) nil)
-
-  (setq eif-compile-dir (file-name-directory (buffer-file-name)))
-  (setq eif-root-class
-	(file-name-sans-extension
-	 (read-string "Name of root class: "
-		      (or eif-compile-target
-			  (file-name-sans-extension
-			   (file-name-nondirectory (buffer-file-name)))))))
-  (setq eif-compile-target eif-root-class)
-  (setq eif-root-proc
-	(read-string "Name of root procedure: "
-		     eif-root-proc)))
-
-(defun eif-compile-internal ()
-  "Compile an Eiffel root class.  Internal version.
-Returns the same thing as \\[compile-internal] - the compilation buffer."
-
-  (let ((cmd (concat eif-compile-command
-		     " "    eif-compile-options
-		     " -o " eif-compile-target
-		     (if (eq system-type 'windows-nt) ".exe")
-		     " "    eif-root-class
-		     " "    eif-root-proc))
-	(compilation-mode-hook (cons 'eif-compilation-mode-hook
-				     compilation-mode-hook)))
-    (compile-internal cmd "No more errors")))
-
-(defun eif-run-internal ()
-  "Run a compiled Eiffel program.  Internal version."
-
-  (let* ((tmp-buf (current-buffer))
-	 (words   (eif-split-string eif-run-command))
-	 (cmd     (expand-file-name (car words))))
-
-    (apply 'make-comint cmd cmd nil (cdr words))
-    (switch-to-buffer tmp-buf)
-    (switch-to-buffer-other-window (concat "*" cmd "*"))))
-
-;; This has been loosened up to spot parts of messages that contain
-;; references to multiple locations.  Thanks to Andreas
-;; <nozone@sbox.tu-graz.ac.at>.  Also, the column number is a character
-;; count rather than a screen column, so we need to make sure that
-;; compilation-error-screen-columns is nil.  Note that in XEmacs this
-;; variable doesn't exist, so we end up in the wrong column.  Hey, at
-;; least we're on the correct line!
-(add-to-list 'compilation-error-regexp-alist
-	     '("^Line \\([0-9]+\\) column \\([0-9]+\\) in [^ ]+ (\\([^)]+\\.[Ee]\\))" 3 1 2))
-
-(defun eif-short ()
-  "Display the short form of an Eiffel class."
-  (interactive)
-  (let* ((class (read-string
-		 "Class or file: "
-		 (if (buffer-file-name)
-		     (file-name-nondirectory (buffer-file-name)))))
-	 (buf (get-buffer-create (concat "*Eiffel - short " class "*"))))
-
-    (shell-command (concat eif-short-command " " class) buf)
-    (save-excursion
-      (set-buffer buf)
-      (let ((font-lock-defaults eiffel-font-lock-defaults))
-	(font-lock-fontify-buffer))
-      (toggle-read-only 1))))
 
 ;;
 ;; Indentation macros.
@@ -973,6 +774,299 @@ See also `c-font-lock-extra-types'.")
 	 (fboundp 'copy-face))
     (copy-face 'font-lock-variable-name-face 'font-lock-constant-face))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;
+;; Compilation support for GNU SmartEiffel.
+;;
+
+(defvar eif-compile-dir nil
+  "Current directory where Eiffel compilations are taking place.
+Possibly used for error location.")
+
+(defvar eif-root-class nil
+  "Current Eiffel root class being compiled/debugged.")
+
+(defvar eif-compile-target nil
+  "Current Eiffel compilation target.")
+
+(defvar eif-debug-target nil
+  "Current Eiffel debug target.")
+
+(defvar eif-root-proc "make"
+  "Current Eiffel root procedure.")
+
+(defvar eif-run-command nil
+  "Current command to run after Eiffel compile.")
+
+(defvar eif-debug-command nil
+  "Current debug command to run after Eiffel debug compile.")
+
+(defun eif-compilation-mode-hook ()
+  "Hook function to set local value for `compilation-error-screen-columns'.
+This should be nil for SmartEiffel compiles, because column positions are
+returned as character positions rather than screen columns."
+  ;; In Emacs > 20.7 compilation-error-screen-columns is buffer local.
+  (or (assq 'compilation-error-screen-columns (buffer-local-variables))
+      (make-local-variable 'compilation-error-screen-columns))
+  (setq compilation-error-screen-columns nil))
+
+(defun eif-compile ()
+  "Compile an Eiffel root class."
+  (interactive)
+  (eif-compile-prompt)
+  (eif-compile-internal))
+
+(defun eif-set-compile-options ()
+  "Set Eiffel compiler options."
+  (interactive)
+  (setq eif-compile-options
+	(read-string "Eiffel compiler options: " eif-compile-options)))
+
+;; Taken from Emacs 20.3 subr.el (just in case we're running under Emacs 19).
+(defun eif-split-string (string &optional separators)
+  "Split STRING into substrings separated by SEPARATORS.
+Each match for SEPARATORS is a splitting point.  The substrings
+between the splitting points are made into a list which is returned.
+If SEPARATORS is absent, it defaults to \"[ \\f\\t\\n\\r\\v]+\".
+
+If there is match for SEPARATORS at the beginning of STRING, we do not
+include a null substring for that.  Likewise, if there is a match
+at the end of STRING, we do not include a null substring for that."
+  (let ((rexp (or separators "[ \f\t\n\r\v]+"))
+	(start 0)
+	notfirst
+	(list nil))
+    (while (and (string-match rexp string
+			      (if (and notfirst
+				       (= start (match-beginning 0))
+				       (< start (length string)))
+				  (1+ start) start))
+		(< (match-beginning 0) (length string)))
+      (setq notfirst t)
+      (or (eq (match-beginning 0) 0)
+	  (and (eq (match-beginning 0) (match-end 0))
+	       (eq (match-beginning 0) start))
+	  (setq list
+		(cons (substring string start (match-beginning 0))
+		      list)))
+      (setq start (match-end 0)))
+    (or (eq start (length string))
+	(setq list
+	      (cons (substring string start)
+		    list)))
+    (nreverse list)))
+
+(defun eif-run ()
+  "Run a compiled Eiffel program."
+  (interactive)
+  (setq eif-run-command
+	(read-string "Command to run: "
+		     (or eif-run-command
+			 eif-compile-target
+			 (file-name-sans-extension
+			  (if (eq system-type 'windows-nt)
+			      buffer-file-name
+			    (file-name-nondirectory (buffer-file-name)))))))
+  (eif-run-internal))
+
+(defun eif-debug ()
+  "Run the SmartEiffel debugger."
+  (interactive)
+
+  (eif-compile-prompt)
+  
+  (setq eif-debug-target
+	(file-name-sans-extension
+	 (read-string "Debug target name: "
+		      (or eif-debug-target
+			  (concat eif-compile-target "_debug")))))
+    
+  (let* ((eif-compile-options (concat "-trace " eif-compile-options))
+	 (eif-compile-target eif-debug-target)
+	 (buff (eif-compile-internal))
+	 (proc (get-buffer-process buff)))
+
+    ;; This works under GNU Emacs, but hangs under at least some
+    ;; versions of XEmacs if there is input pending.
+    (while (eq (process-status proc) 'run)
+      (sit-for 1))
+
+    (if (= (process-exit-status proc) 0)
+	(progn
+	  (setq eif-debug-command
+		(read-string "Debugger command to run: "
+			     (or eif-debug-command
+				 eif-debug-target
+				 (file-name-sans-extension
+				  (if (eq system-type 'windows-nt)
+				      buffer-file-name
+				    (file-name-nondirectory
+				     (buffer-file-name)))))))
+	  (let ((eif-run-command eif-debug-command))
+	    (eif-run-internal))))))
+
+(defun eif-compile-prompt ()
+  "Prompt for information required to compile an Eiffel root class."
+
+  ;; Do the save first, since the user might still have their hand on
+  ;; the mouse.
+  (save-some-buffers (not compilation-ask-about-save) nil)
+
+  (setq eif-compile-dir (file-name-directory (buffer-file-name)))
+  (setq eif-root-class
+	(file-name-sans-extension
+	 (read-string "Name of root class: "
+		      (or eif-compile-target
+			  (file-name-sans-extension
+			   (file-name-nondirectory (buffer-file-name)))))))
+  (setq eif-compile-target eif-root-class)
+  (setq eif-root-proc
+	(read-string "Name of root procedure: "
+		     eif-root-proc)))
+
+(defun eif-compile-internal ()
+  "Compile an Eiffel root class.  Internal version.
+Returns the same thing as \\[compile-internal] - the compilation buffer."
+
+  (let ((cmd (concat eif-compile-command
+		     " "    eif-compile-options
+		     " -o " eif-compile-target
+		     (if (eq system-type 'windows-nt) ".exe")
+		     " "    eif-root-class
+		     " "    eif-root-proc))
+	(compilation-mode-hook (cons 'eif-compilation-mode-hook
+				     compilation-mode-hook)))
+    (compile-internal cmd "No more errors")))
+
+(defun eif-run-internal ()
+  "Run a compiled Eiffel program.  Internal version."
+
+  (let* ((tmp-buf (current-buffer))
+	 (words   (eif-split-string eif-run-command))
+	 (cmd     (expand-file-name (car words))))
+
+    (apply 'make-comint cmd cmd nil (cdr words))
+    (switch-to-buffer tmp-buf)
+    (switch-to-buffer-other-window (concat "*" cmd "*"))))
+
+;; This has been loosened up to spot parts of messages that contain
+;; references to multiple locations.  Thanks to Andreas
+;; <nozone@sbox.tu-graz.ac.at>.  Also, the column number is a character
+;; count rather than a screen column, so we need to make sure that
+;; compilation-error-screen-columns is nil.  Note that in XEmacs this
+;; variable doesn't exist, so we end up in the wrong column.  Hey, at
+;; least we're on the correct line!
+(add-to-list 'compilation-error-regexp-alist
+	     '("^Line \\([0-9]+\\) column \\([0-9]+\\) in [^ ]+ (\\([^)]+\\.[Ee]\\))" 3 1 2))
+
+(defun eif-short ()
+  "Display the short form of an Eiffel class."
+  (interactive)
+  (let* ((class (read-string
+		 "Class or file: "
+		 (if (buffer-file-name)
+		     (file-name-nondirectory (buffer-file-name)))))
+	 (buf (get-buffer-create (concat "*Eiffel - short " class "*"))))
+
+    (shell-command (concat eif-short-command " " class) buf)
+    (save-excursion
+      (set-buffer buf)
+      (let ((font-lock-defaults eiffel-font-lock-defaults))
+	(font-lock-fontify-buffer))
+      (toggle-read-only 1))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                      Utility Functions.                      ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun eif-feature-quote ()
+  "Put a `' around the current feature name."
+  (interactive)
+  (save-excursion
+    ;; Only try to go back to the beginning of the feature if we're
+    ;; not already there.
+    (if (/= (point)
+	    (save-excursion
+	      (forward-sexp)
+	      (backward-sexp)
+	      (point)))
+	(backward-sexp))
+    (insert "`")
+    (forward-sexp)
+    (insert "'"))
+  (if (looking-at "'")
+      (forward-char 1)))
+
+(defun eif-peeking-backwards-at (regexp)
+  "Return non-nil is previous character exists and is matched by REGEXP.
+The match is actually an unbounded match starting at the previous character."
+  (save-excursion
+    (save-match-data
+      (and (not (bobp))
+	   (or (backward-char) t)
+	   (looking-at regexp)))))
+
+(defsubst eif-in-comment-p ()
+  "Return t if point is in a comment."
+  (interactive)
+  (save-excursion
+    (nth 4 (parse-partial-sexp
+ 	    (save-excursion (beginning-of-line) (point))
+ 	    (point)))))
+
+(defun eif-in-comment-or-quoted-string-p ()
+  "Return t if point is in a comment or quoted string."
+  (or (eif-in-comment-p)
+      (eif-in-quoted-string-p)))
+  
+(defun eif-not-in-comment-or-quoted-string-p ()
+  "Return t if point is not in a comment or quoted string."
+  (not (eif-in-comment-or-quoted-string-p)))
+  
+(defun eif-near-comment-p ()
+  "Return t if point is close enough to a comment for filling purposes."
+  (or (eif-in-comment-p)
+      (and (or (looking-at comment-start-skip)
+	       (eif-peeking-backwards-at comment-start-skip))
+	   (not (eif-in-quoted-string-p)))
+      (looking-at (concat "[ \t]*" comment-start-skip))))
+
+(defun eif-re-search-forward (regexp &optional limit noerror)
+  "Search forward from point for REGEXP not in comment or string.
+`case-fold-search' is set to nil when searching.  For details on other
+arguments see \\[re-search-forward]."
+
+  (interactive "sRE search: ")
+  (let ((start (point))
+	found case-fold-search)
+    (while (and (setq found (re-search-forward regexp limit noerror))
+		(eif-in-comment-or-quoted-string-p)))
+    (if (and found
+	    (eif-not-in-comment-or-quoted-string-p))
+	found
+      (if (eq noerror t)
+	  (goto-char start))
+      nil)))
+
+(defun eif-re-search-backward (regexp &optional limit noerror)
+  "Search backward from point for REGEXP not in comment or string.
+`case-fold-search' is set to nil when searching.  For details on other
+arguments see \\[re-search-forward]."
+  (interactive "sRE search: ")
+  (let ((start (point))
+	found case-fold-search)
+    (while (and (setq found (re-search-backward regexp limit noerror))
+		(eif-in-comment-or-quoted-string-p)))
+    (if (and found
+	    (eif-not-in-comment-or-quoted-string-p))
+	found
+      (if (eq noerror t)
+	  (goto-char start))
+      nil)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                      Indentation Functions.                  ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -990,7 +1084,6 @@ This function generally assumes that the preceding line of code is
 indented properly, although lines containing certain class-level
 constructs do not require correct indentation of the preceding line."
   (let ((indent   0)
-	(line-end 0)
 	originally-looking-at-comment originally-looking-at-lone-string
 	kw-match continuation id-colon)
 
@@ -1630,28 +1723,6 @@ does matching of parens ala \\[backward-sexp]'."
   (make-local-variable 'eif-indent-increment)
   (setq eif-indent-increment amount))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                      Utility Functions.                      ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defun eif-feature-quote ()
-  "Put a `' around the current feature name."
-  (interactive)
-  (save-excursion
-    ;; Only try to go back to the beginning of the feature if we're
-    ;; not already there.
-    (if (/= (point)
-	    (save-excursion
-	      (forward-sexp)
-	      (backward-sexp)
-	      (point)))
-	(backward-sexp))
-    (insert "`")
-    (forward-sexp)
-    (insert "'"))
-  (if (looking-at "'")
-      (forward-char 1)))
-
 ;; ----------------------------------------------------------------------
 ;; This next portion of the file is derived from "eiffel.el"
 ;; Copyright (C) 1989, 1990 Free Software Foundation, Inc. and Bob Weiner
@@ -1828,73 +1899,6 @@ compilation and indentation variables that can be customized."
   (setq auto-fill-function 'eif-auto-fill)
   (run-hooks 'eiffel-mode-hook))
 
-(defun eif-not-in-comment-or-quoted-string-p ()
-  "Return t if point is not in a comment or quoted string."
-  (not (eif-in-comment-or-quoted-string-p)))
-  
-(defun eif-in-comment-or-quoted-string-p ()
-  "Return t if point is in a comment or quoted string."
-  (or (eif-in-comment-p)
-      (eif-in-quoted-string-p)))
-  
-(defsubst eif-in-comment-p ()
-  "Return t if point is in a comment."
-  (interactive)
-  (save-excursion
-    (nth 4 (parse-partial-sexp
- 	    (save-excursion (beginning-of-line) (point))
- 	    (point)))))
-
-(defun eif-near-comment-p ()
-  "Return t if point is close enough to a comment for filling purposes."
-  (or (eif-in-comment-p)
-      (and (or (looking-at comment-start-skip)
-	       (eif-peeking-backwards-at comment-start-skip))
-	   (not (eif-in-quoted-string-p)))
-      (looking-at (concat "[ \t]*" comment-start-skip))))
-
-(defun eif-re-search-forward (regexp &optional limit noerror)
-  "Search forward from point for REGEXP not in comment or string.
-`case-fold-search' is set to nil when searching.  For details on other
-arguments see \\[re-search-forward]."
-
-  (interactive "sRE search: ")
-  (let ((start (point))
-	found case-fold-search)
-    (while (and (setq found (re-search-forward regexp limit noerror))
-		(eif-in-comment-or-quoted-string-p)))
-    (if (and found
-	    (eif-not-in-comment-or-quoted-string-p))
-	found
-      (if (eq noerror t)
-	  (goto-char start))
-      nil)))
-
-(defun eif-re-search-backward (regexp &optional limit noerror)
-  "Search backward from point for REGEXP not in comment or string.
-`case-fold-search' is set to nil when searching.  For details on other
-arguments see \\[re-search-forward]."
-  (interactive "sRE search: ")
-  (let ((start (point))
-	found case-fold-search)
-    (while (and (setq found (re-search-backward regexp limit noerror))
-		(eif-in-comment-or-quoted-string-p)))
-    (if (and found
-	    (eif-not-in-comment-or-quoted-string-p))
-	found
-      (if (eq noerror t)
-	  (goto-char start))
-      nil)))
-
-(defun eif-peeking-backwards-at (regexp)
-  "Return non-nil is previous character exists and is matched by REGEXP.
-The match is actually an unbounded match starting at the previous character."
-  (save-excursion
-    (save-match-data
-      (and (not (bobp))
-	   (or (backward-char) t)
-	   (looking-at regexp)))))
-
 (defconst eif-prefeature-regexp
   (concat "\\(" eif-non-source-line "\\|\n\\)*" "[ \t]*")
   "Regexp matching whitespace-equivalent content, possibly before a feature.")
@@ -1928,7 +1932,7 @@ This will always move backward, if possible."
   (interactive)
   
   (let ((start (point))
-	candidate routine-begin routine-end)
+	candidate routine-begin)
     (if (eif-re-search-backward (concat "\\s-" eif-probably-feature-regexp)
 				nil t)
 	(progn
@@ -2067,10 +2071,8 @@ The feature visible is the one that contains point or follows point."
 (defun eif-current-line-indent ()
   "Return the indentation of the line containing the point."
   (save-excursion
-    (let ((line-end 0)
-	  (indent   0))
-      (eif-skip-leading-whitespace)
-      (setq indent (current-column)))))
+    (eif-skip-leading-whitespace)
+    (current-column)))
 
 (defun eif-in-quoted-string-p (&optional non-strict-p)
   "Return t if point is in a quoted string.
@@ -2238,19 +2240,14 @@ Return t if successful, nil if not."
   "Determine if we are inside of a manifest array."
   (interactive)
   (let ((paren-count 0)
-	(limit 0)
 	indent)
     (save-excursion
       (if (= eif-last-feature-level-indent (eif-feature-level-indent-m))
-	  (setq limit
-		(re-search-backward eif-feature-level-indent-regexp nil t))
+	  nil
 	(setq eif-last-feature-level-indent (eif-feature-level-indent-m))
 	(setq eif-feature-level-indent-regexp
 	      (concat "^" (make-string eif-last-feature-level-indent ? )
-		      "[^ \t\n]"))
-	(setq limit
-	      (or (re-search-backward eif-feature-level-indent-regexp nil t)
-		  0))))
+		      "[^ \t\n]"))))
     (save-excursion
       (while (and (<= paren-count 0) (re-search-backward "<<\\|>>" nil t))
 	(if (looking-at "<<")
@@ -2268,19 +2265,14 @@ Return t if successful, nil if not."
   "Determine the indentation of the statement containing a manifest array."
   (interactive)
   (let ((paren-count 0)
-	(limit 0)
 	indent)
     (save-excursion
       (if (= eif-last-feature-level-indent (eif-feature-level-indent-m))
-	  (setq limit
-		(re-search-backward eif-feature-level-indent-regexp nil t))
+	  nil
 	(setq eif-last-feature-level-indent (eif-feature-level-indent-m))
 	(setq eif-feature-level-indent-regexp
 	      (concat "^" (make-string eif-last-feature-level-indent ? )
-		      "[^ \t\n]"))
-	(setq limit
-	      (or (re-search-backward eif-feature-level-indent-regexp nil t)
-		  0))))
+		      "[^ \t\n]"))))
     (save-excursion
       (while (and (<= paren-count 0) (re-search-backward "<<\\|>>" nil t))
 	(if (looking-at "<<")
@@ -2413,12 +2405,9 @@ point."
   "Generate an index of all features of a class.
 Sort by position if sort-method is 0. Sort by name if sort-method is 1."
 
-  (let (menu prevpos prefix)
+  (let (menu prevpos)
 
     (imenu-progress-message prevpos 0 t)
-    (if (= sort-method 0)
-        (setq prefix "  ")
-      (setq prefix nil))
 
     ;; scan for features
     (goto-char (point-max))
@@ -2429,7 +2418,7 @@ Sort by position if sort-method is 0. Sort by name if sort-method is 1."
 				    (match-beginning 0)
 				    (match-end 0)) (point)))))
 
-    (imenu-progress-message prev-pos 100)
+    (imenu-progress-message prevpos 100)
 
     ;; sort in increasing buffer position order or by name
     (if (= sort-method 0)
