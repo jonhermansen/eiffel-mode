@@ -399,42 +399,36 @@ in Debian GNU/Linux, when the default value is \"se-compile\"."
 (defconst eif-non-id-char-regexp "\\S_" ;; "[^a-z0-9_]"
   "The characters that are not part of identifiers.")
 
-(defun eif-post-anchor (regexp)
+(defun eif-post-word-anchor (regexp)
   "Anchor given REGEXP with end-word delimiter and `eif-non-id-char-regexp'."
   (concat "\\(" regexp "\\)\\>" eif-non-id-char-regexp))
 
 (defun eif-word-anchor (regexp)
   "Anchor given REGEXP with word delimiters and `eif-non-id-char-regexp'."
-  (concat "\\<\\(" regexp "\\)\\>" eif-non-id-char-regexp))
+  (concat "\\<" (eif-post-word-anchor regexp)))
+
+(defun eif-post-anchor (regexp)
+  "Anchor given REGEXP at end to match line break or non-symbol char."
+  (concat "\\(" regexp "\\)\\($\\|\\>\\S_\\)"))
 
 (defun eif-anchor (regexp)
   "Anchor given REGEXP front and back to match line break or non-symbol char."
-  (concat "\\(^\\|\\S_\\<\\)\\(" regexp "\\)\\($\\|\\>\\S_\\)"))
-
-(defconst eif-feature-regexp
-  "feature[^.]*$"
-  "The `feature' keyword, with some trailing context.
-This avoids matching static function calls in Eiffel for .NET.")
+  (concat "\\(^\\|\\S_\\<\\)" (eif-post-anchor regexp)))
 
 ;; Note invariant is handled as a special case since it is both a
 ;; class-level and a from-level keyword
 ;; Note obsolete is handled as a special case since it is both a
 ;; class-level and a feature-level keyword
-(defconst eif-class-level-keywords
-  (concat
-   "class" "\\|"
-   "deferred[ \t]+class\\|expanded[ \t]+class" "\\|"
-   "reference[ \t]+class\\|separate[ \t]+class" "\\|"
-   "inherit\\|creation" "\\|"
-   eif-feature-regexp)
-  "Keywords introducing class-level clauses.
+(defconst eif-class-level-keywords-regexp
+  (eif-post-anchor
+   (concat
+    "class\\|feature" "\\|"
+    "deferred[ \t]+class\\|expanded[ \t]+class" "\\|"
+    "reference[ \t]+class\\|separate[ \t]+class" "\\|"
+    "inherit\\|creation"))
+  "Regexp of keywords introducing class level clauses, with some context.
 Note that `invariant' and `obsolete' are not included here since can
 function as more than one type of keyword.")
-
-(defconst eif-class-level-keywords-regexp
-  (eif-word-anchor eif-class-level-keywords)
-  "Regexp of keywords introducing class level clauses, with some context.
-See `eif-class-level-keywords'.")
 
 (defconst eif-inherit-level-keywords
   "rename\\|redefine\\|undefine\\|select\\|export"
@@ -493,8 +487,7 @@ of this list but it is handled separately in the function
   "The `end' keyword with context.")
 
 (defconst eif-end-matching-keywords
-  (concat eif-feature-regexp "\\|"
-	  "check\\|class\\|rename\\|redefine\\|undefine" "\\|"
+  (concat "check\\|class\\|feature\\|rename\\|redefine\\|undefine" "\\|"
 	  "select\\|export\\|separate\\|external\\|alias" "\\|"
 	  eif-control-flow-matching-keywords)
   "Those keywords whose clause is terminated by an `end' keyword.")
@@ -560,8 +553,7 @@ function \[eif-matching-kw\].  See also
 (defconst eif-invariant-keyword "invariant" "The `invariant' keyword.")
 
 (defconst eif-invariant-matching-keywords
-  (concat "from" "\\|"
-	  eif-feature-regexp)
+  "from\\|feature"
   "Keywords that may cause the indentation of an `eif-invarient-keyword'.
 If one of these occurs prior to an `eif-invariant-keyword' then the
 `eif-invariant-keyword' is indented.  Note that technically, `end' is
@@ -579,7 +571,7 @@ If one of these occurs prior to an `eif-obsolete-keyword' then the
   "Eiffel `create' keyword.  Can be used at class or minor level.")
 
 (defconst eif-create-keyword-regexp
-  (eif-post-anchor eif-create-keyword)
+  (eif-post-word-anchor eif-create-keyword)
   "Regexp matching `create' keyword, with trailing context.")
 
 (defconst eif-indexing-keyword
@@ -587,7 +579,7 @@ If one of these occurs prior to an `eif-obsolete-keyword' then the
   "Eiffel `indexing' keyword.  Can be used at class or minor level.")
 
 (defconst eif-indexing-keyword-regexp
-  (eif-post-anchor eif-indexing-keyword)
+  (eif-post-word-anchor eif-indexing-keyword)
   "Regexp matching `indexing' keyword, with trailing context.")
 
 (defconst eif-indentation-keywords
@@ -603,12 +595,15 @@ If one of these occurs prior to an `eif-obsolete-keyword' then the
   "Regexp of keywords that match any eiffel keyword triggering indentation.
 See `eif-indentation-keywords'.")
 
-(defconst eif-once-non-indent-regexp
-  "\\s-*once\\(\\s-\\|\n\\)+\""
-  "Regexp of Eiffel once keyword in context not affecting indentation.")
+(defconst eif-non-indenting-keywords-regexp
+  (concat "\\("
+	  "once\\(\\s-\\|\n\\)+\"" "\\|"
+	  (concat (eif-post-anchor "feature") ".*\\..*$")
+	  "\\)")
+  "Regexp of keywords with context cancelling any effect on indentation.")
 
 (defconst eif-feature-indentation-keywords-regexp
-  (eif-word-anchor (concat "creation" "\\|" eif-feature-regexp))
+  (eif-word-anchor "creation\\|feature")
   "Keywords that denote the presence of features following them.")
 
 (defconst eif-is-keyword-regexp "\\(.*[ \t)]\\)?is[ \t]*\\(--.*\\)?$"
@@ -637,8 +632,7 @@ See `eif-operator-keywords'.")
 (defconst eif-misc-keywords
   (concat "agent\\|all\\|as\\|frozen\\|infix\\|like" "\\|"
 	  "old\\|precursor\\|prefix\\|retry\\|strip\\|unique\\|xor" "\\|"
-	  "expanded\\|reference" "\\|"
-	  "feature")
+	  "expanded\\|reference")
   "Eiffel miscellaneous keywords.")
 
 (defconst eif-preprocessor-keywords
@@ -646,7 +640,7 @@ See `eif-operator-keywords'.")
   "Eiffel GOBO preprocessor keywords.")
 
 (defconst eif-preprocessor-keywords-regexp
-  (eif-post-anchor eif-preprocessor-keywords)
+  (eif-post-word-anchor eif-preprocessor-keywords)
   "Eiffel GOBO preprocessor keywords, with context.
 See `eif-preprocessor-keywords'.")
 
@@ -757,7 +751,7 @@ This will also match local variable and parameter declarations.")
      ;; Preprocessor keywords.  Note that, by luck more than planning,
      ;; these aren't font-locked when they're not indented, since the
      ;; '#' isn't a word boundary (which is added by eif-anchor).
-     (,(eif-post-anchor eif-preprocessor-keywords) 2 font-lock-builtin-face nil)
+     (,(eif-post-word-anchor eif-preprocessor-keywords) 2 font-lock-builtin-face nil)
 
      ;; Keywords.  The first few can appear in conjunction with other
      ;; keywords, and the anchored regexp doesn't cater for overlaps,
@@ -1147,7 +1141,7 @@ don't start with a relevant keyword, the calculation is handed off to
 		   ;; Class-level.
 		   (setq indent (eif-class-level-kw-indent-m))))
 		;; There's possibly a better way of coding this exception.
-		((looking-at eif-once-non-indent-regexp)
+		((looking-at eif-non-indenting-keywords-regexp)
 		 (setq indent (eif-calc-indent-non-keyword)))
 		((looking-at eif-class-level-keywords-regexp)
 		 ;; File level keywords (indent defaults to 0)
@@ -1330,6 +1324,11 @@ line on that preceding line."
 	(cond ((and (= (point) 1)
 		    originally-looking-at-comment
 		    (setq indent (eif-class-level-comment-indent-m))))
+	      ((and (= (setq indent (eif-current-line-indent))
+		       (eif-feature-level-kw-indent-m))
+		    originally-looking-at-comment)
+	       (setq indent (+ indent eif-indent-increment
+			        (eif-body-comment-indent-m))))
 	      ;; 'eif-is-keyword-regexp' case must precede
 	      ;; '(not eif-all-keywords-regexp)' case since "is" is not
 	      ;; part of 'eif-all-keywords-regexp'
@@ -1342,13 +1341,14 @@ line on that preceding line."
 		 ;; Else  the line being indented is not a comment
 		 (setq indent (eif-feature-level-kw-indent-m))))
 	      ;; Feature indentation keyword or class-level `create'.
-	      ((or (looking-at eif-feature-indentation-keywords-regexp)
+	      ((or (and (looking-at eif-feature-indentation-keywords-regexp)
+			(not (looking-at eif-non-indenting-keywords-regexp)))
 		   (and (looking-at eif-create-keyword-regexp)
 			(not (save-excursion
 			       (eif-find-beginning-of-feature)))))
 	       (setq indent (eif-feature-level-indent-m)))
 	      ((and (looking-at eif-indentation-keywords-regexp)
-		    (not (looking-at eif-once-non-indent-regexp)))
+		    (not (looking-at eif-non-indenting-keywords-regexp)))
 	       (if (looking-at eif-end-on-current-line)
 		   (setq indent (eif-current-line-indent))
 		 (setq indent
@@ -1395,7 +1395,7 @@ line on that preceding line."
 	      ;; case.  As for minor instance of `once'.
 	      ((or (not (looking-at eif-all-keywords-regexp))
 		   (looking-at eif-create-keyword-regexp)
-		   (looking-at eif-once-non-indent-regexp))
+		   (looking-at eif-non-indenting-keywords-regexp))
 	       (if originally-looking-at-comment
 		   ;; Then  the line we are trying to indent is a comment
 		   (cond ((eif-continuation-line)
@@ -1503,17 +1503,16 @@ finding one of the keywords in MATCHING-KEYWORD-REGEXP and it
 terminates a check clause, set the value of variable
 `eif-matching-indent' to the indentation of the `end' minus the value
 of `eif-check-keyword-indent'."
-  (let ((search-regexp (concat "[^a-z0-9A-Z_.]"
-			       eif-end-keyword
-			       "[^a-z0-9A-Z_.]\\|[^a-z0-9A-Z_.]"
-			       matching-keyword-regexp))
-	(keyword ""))
+  (let* ((c "[^a-z0-9A-Z_.]")
+	 (search-regexp (concat c eif-end-keyword c "\\|"
+				c matching-keyword-regexp))
+	 (keyword ""))
     (save-excursion
       ;; Search backward for a matching keyword.
-      ;; Note that eif-once-non-indent-regexp indicates we haven't
+      ;; Note that eif-non-indenting-keywords-regexp indicates we haven't
       ;; found a match so should keep going.
       (while (and (eif-re-search-backward search-regexp 1 t)
-		  (looking-at eif-once-non-indent-regexp)
+		  (looking-at (concat c eif-non-indenting-keywords-regexp))
 		  (not (= (point) 1))))
       (if (looking-at search-regexp)
 	  ;; Then - a keyword was found
