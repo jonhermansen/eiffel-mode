@@ -63,6 +63,21 @@
 
 ;;; Code:
 
+(defgroup eiffel nil
+  "Eiffel mode for Emacs"
+  :group 'oop)
+
+(defgroup eiffel-indent nil
+  "Indentation variables in Eiffel mode"
+  :prefix "eif-"
+  :group 'eiffel)
+
+(defgroup eiffel-compile nil
+  "Compilation support variables in Eiffel mode"
+  :prefix "eif-"
+  :group 'eiffel)
+
+
 ;; Indentation amount variables.
 ;;
 ;; The default values correspond to style used in ``Eiffel: The
@@ -71,154 +86,154 @@
 (defcustom eif-indent-increment 3
   "*Default indentation interval (in spaces)."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-class-level-kw-indent 0
   "*Indentation for Class level keywords.
 Specified as number of `eif-indent-increments'.  See the variable
 `eif-class-level-keywords'."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-extra-class-level-kw-indent 0
   "*Number of extra spaces to add to `eif-class-level-kw-indent'.
 This results in the actual indentation of a class level keyword.  Can
 be negative."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-class-level-comment-indent 0
   "*Indentation of comments at the beginning of a class.
 Specified as number of `eif-indent-increments'."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-extra-class-level-comment-indent 0
   "*Number of spaces to add to `eif-class-level-comment-indent'.
 This results in the actual indentation of a class level comment.  Can
 be negative."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-inherit-level-kw-indent 2
   "*Indentation of keywords falling under the Inherit clause.
 Specified as number of `eif-indent-increments'.  See the variable
 `eif-inherit-level-keywords'."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-extra-inherit-level-kw-indent 0
   "*Number of spaces to add to `eif-inherit-level-kw-indent'.
 This results in the actual indentation of an inherit level keyword.
 Can be negative."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-feature-level-indent 1
   "*Indentation amount of features.
 Specified as number of `eif-indent-increments'."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-extra-feature-level-indent 0
   "*Number of spaces to add to `eif-feature-level-indent'.
 This results in the indentation of a feature.  Can be negative."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-feature-level-kw-indent 2
   "*Indentation of keywords belonging to individual features.
 Specified as number of `eif-indent-increments'.  See the variable
 `eif-feature-level-keywords'."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-extra-feature-level-kw-indent 0
   "*Number of spaces to add to `eif-feature-level-kw-indent'.
 This results in the actual indentation of a feature level keyword.
 Can be negative."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-feature-level-comment-indent 3
   "*Indentation of comments at the beginning of a feature.
 Specified as number of `eif-indent-increments'."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-extra-feature-level-comment-indent 0
   "*Number of spaces to add to `eif-feature-level-comment-indent'.
 This results in the actual indentation of a feature level comment.
 Can be negative."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-body-comment-indent 0
   "*Indentation of comments in the body of a routine.
 Specified as number of `eif-indent-increments')"
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-extra-body-comment-indent 0
   "*Number of spaces to add to `eif-body-comment-indent'.
 This results in the actual indentation of a routine body comment.  Can
 be negative."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-check-keyword-indent 0
   "*Extra indentation for the check clause as described in ETL.
 Specified as number of `eif-indent-increments'.  Default is 0, which
 is different than in ETL's 1."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-extra-check-keyword-indent 0
   "*Number of spaces to add to `eif-check-keyword-indent'.
 This results in the actual indentation of a check keyword.  Can be
 negative."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-rescue-keyword-indent -1
   "*Extra indentation for the rescue clause as described in ETL.
 Specified as number of `eif-indent-increments'.  Default is -1."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-extra-rescue-keyword-indent 0
   "*Number of spaces to add to `eif-rescue-keyword-indent'.
 This results in the actual indentation of a rescue keyword.  Can be
 negative."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-then-indent 0
   "*Indentation for a `then' appearing on a line by itself.
 This is as opposed to a `then' on the same line as an `if'.  Specified
 as number of `eif-indent-increments'."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-extra-then-indent 1
   "*Number of spaces to add to `eif-then-indent'.
 This results in the actual indentation of a `then' appearing on a line
 by itself.  Can be negative."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-continuation-indent 1
   "*Extra indentation for a continued statement line.
 Specified as number of `eif-indent-increments'."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 (defcustom eif-extra-continuation-indent 0
   "*Number of spaces to add to `eif-continuation-indent'.
 This results in the actual indentation of a continued statement
 line.  Can be negative."
   :type 'integer
-  :group 'eiffel)
+  :group 'eiffel-indent)
 
 ;;
 ;; Font-lock support.
@@ -252,22 +267,24 @@ line.  Can be negative."
 (defcustom eif-use-gnu-eiffel t
   "*If t include support for compilation using GNU Eiffel."
   :type 'boolean
-  :group 'eiffel)
+  :group 'eiffel-compile)
 
 (defcustom eif-compile-command "compile"
-  "*Program to use for compiling Eiffel programs."
+  "*Program to use for compiling Eiffel programs.
+The default is \"compile\".  In Debian GNU/Linux this is probably
+\"se-compile\"."
   :type 'string
-  :group 'eiffel)
+  :group 'eiffel-compile)
 
 (defcustom eif-short-command "short"
   "*Program to use for producing short form of Eiffel classes."
   :type 'string
-  :group 'eiffel)
+  :group 'eiffel-compile)
 
 (defcustom eif-compile-options ""
   "*Options to use for compiling Eiffel programs."
   :type 'string
-  :group 'eiffel)
+  :group 'eiffel-compile)
 
 (defvar eif-compile-dir nil
   "Current directory where Eiffel compilations are taking place.
