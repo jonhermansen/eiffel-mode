@@ -346,14 +346,23 @@ in Debian GNU/Linux, when the default value is \"se-compile\"."
   "Current directory where Eiffel compilations are taking place.
 Possibly used for error location.")
 
+(defvar eif-root-class nil
+  "Current Eiffel root class being compiled/debugged.")
+
 (defvar eif-compile-target nil
   "Current Eiffel compilation target.")
+
+(defvar eif-debug-target nil
+  "Current Eiffel debug target.")
 
 (defvar eif-root-proc "make"
   "Current Eiffel root procedure.")
 
 (defvar eif-run-command nil
   "Current command to run after Eiffel compile.")
+
+(defvar eif-debug-command nil
+  "Current debug command to run after Eiffel debug compile.")
 
 (defun eif-compilation-mode-hook ()
   "Hook function to set local value for `compilation-error-screen-columns'.
@@ -367,30 +376,8 @@ returned as character positions rather than screen columns."
 (defun eif-compile ()
   "Compile an Eiffel root class."
   (interactive)
-
-  ;; Do the save first, since the user might still have their hand on
-  ;; the mouse.
-  (save-some-buffers (not compilation-ask-about-save) nil)
-
-  (setq eif-compile-dir (file-name-directory (buffer-file-name)))
-  (setq eif-compile-target
-	(file-name-sans-extension
-	 (read-string "Name of root class: "
-		      (or eif-compile-target
-			  (file-name-sans-extension
-			   (file-name-nondirectory (buffer-file-name)))))))
-  (setq eif-root-proc
-	(read-string "Name of root procedure: "
-		     eif-root-proc))
-  (let ((cmd (concat eif-compile-command
-		     " "    eif-compile-options
-		     " -o " eif-compile-target
-		     (if (eq system-type 'windows-nt) ".exe")
-		     " "    eif-compile-target
-		     " "    eif-root-proc))
-	(compilation-mode-hook (cons 'eif-compilation-mode-hook
-				     compilation-mode-hook)))
-    (compile-internal cmd "No more errors")))
+  (eif-compile-prompt)
+  (eif-compile-internal))
 
 (defun eif-set-compile-options ()
   "Set Eiffel compiler options."
@@ -443,6 +430,79 @@ at the end of STRING, we do not include a null substring for that."
 			  (if (eq system-type 'windows-nt)
 			      buffer-file-name
 			    (file-name-nondirectory (buffer-file-name)))))))
+  (eif-run-internal))
+
+(defun eif-debug ()
+  "Run the SmallEiffel debugger."
+  (interactive)
+
+  (eif-compile-prompt)
+  
+  (setq eif-debug-target
+	(file-name-sans-extension
+	 (read-string "Debug target name: "
+		      (or eif-debug-target
+			  (concat eif-compile-target "_debug")))))
+    
+  (let* ((eif-compile-options (concat "-trace " eif-compile-options))
+	 (eif-compile-target eif-debug-target)
+	 (buff (eif-compile-internal))
+	 (proc (get-buffer-process buff)))
+
+    ;; This works under GNU Emacs, but hangs under XEmacs if there is
+    ;; input pending.
+    ;;(while (eq (process-status proc) 'run)
+    ;;  (sit-for 1))
+
+    (if (= (process-exit-status proc) 0)
+	(progn
+	  (setq eif-debug-command
+		(read-string "Debugger command to run: "
+			     (or eif-debug-command
+				 eif-debug-target
+				 (file-name-sans-extension
+				  (if (eq system-type 'windows-nt)
+				      buffer-file-name
+				    (file-name-nondirectory
+				     (buffer-file-name)))))))
+	  (let ((eif-run-command eif-debug-command))
+	    (eif-run-internal))))))
+
+(defun eif-compile-prompt ()
+  "Prompt for information required to compile an Eiffel root class."
+
+  ;; Do the save first, since the user might still have their hand on
+  ;; the mouse.
+  (save-some-buffers (not compilation-ask-about-save) nil)
+
+  (setq eif-compile-dir (file-name-directory (buffer-file-name)))
+  (setq eif-root-class
+	(file-name-sans-extension
+	 (read-string "Name of root class: "
+		      (or eif-compile-target
+			  (file-name-sans-extension
+			   (file-name-nondirectory (buffer-file-name)))))))
+  (setq eif-compile-target eif-root-class)
+  (setq eif-root-proc
+	(read-string "Name of root procedure: "
+		     eif-root-proc)))
+
+(defun eif-compile-internal ()
+  "Compile an Eiffel root class.  Internal version.
+Returns the same thing as \\[compile-internal] - the compilation buffer."
+
+  (let ((cmd (concat eif-compile-command
+		     " "    eif-compile-options
+		     " -o " eif-compile-target
+		     (if (eq system-type 'windows-nt) ".exe")
+		     " "    eif-root-class
+		     " "    eif-root-proc))
+	(compilation-mode-hook (cons 'eif-compilation-mode-hook
+				     compilation-mode-hook)))
+    (compile-internal cmd "No more errors")))
+
+(defun eif-run-internal ()
+  "Run a compiled Eiffel program.  Internal version."
 
   (let* ((tmp-buf (current-buffer))
 	 (words   (eif-split-string eif-run-command))
@@ -1489,6 +1549,7 @@ does matching of parens ala \\[backward-sexp]'."
 		["Compiler Options..."   eif-set-compile-options t]
 		["Next Compile Error..." next-error  t]
 		["Run..."                eif-run     t]
+		["Debug..."              eif-debug   t]
 		["Short..."              eif-short   t]
 		["----------" nil nil]))
 	   (list
@@ -1527,6 +1588,7 @@ compilation and indentation variables that can be customized."
 	(define-key eiffel-mode-map "\C-c\C-c" 'eif-compile)
 	(define-key eiffel-mode-map "\C-c\C-o" 'eif-set-compile-options)
 	(define-key eiffel-mode-map "\C-c\C-r" 'eif-run)
+	(define-key eiffel-mode-map "\C-c\C-d" 'eif-debug)
 	(define-key eiffel-mode-map "\C-c\C-s" 'eif-short))
     (define-key eiffel-mode-map "\C-c\C-c" nil)
     (define-key eiffel-mode-map "\C-c\C-o" nil)
