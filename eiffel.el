@@ -1406,8 +1406,9 @@ does matching of parens ala \\[backward-sexp]'."
 	(define-key eiffel-mode-map "\C-c\C-r" 'eif-run)
 	(define-key eiffel-mode-map "\C-c\C-s" 'eif-short))
     (define-key eiffel-mode-map "\C-c\C-c" nil)
+    (define-key eiffel-mode-map "\C-c\C-o" nil)
     (define-key eiffel-mode-map "\C-c\C-r" nil)
-    (define-key eiffel-mode-map "\C-c\C-o" nil))
+    (define-key eiffel-mode-map "\C-c\C-s" nil))
     
 
   (use-local-map eiffel-mode-map)
