@@ -777,27 +777,25 @@ See `eif-indentation-keywords'.")
   ".*([^)]*)\\([ \t\n]*\\|[ \t\n]*:[][ \t\nA-Za-x0-9_,]*\\)is[ \t]*\\(--.*\\)?$"
   "The `is' keyword (with some context).")
 
-(defconst eif-operator-keyword-list
-  '("and" "or" "implies")
+(defconst eif-operator-keywords
+  "and\\|or\\|implies"
   "Eiffel operator keywords.")
-
-(defconst eif-operator-combined-regexp
-  (concat "\\(" 
-   	  (mapconcat '(lambda (x) (concat x " not\\|" x))
-		     eif-operator-keyword-list
-		     "\\|")
-	  "\\)")
-  "Eiffel operators, with each operator combined with \" not\" and alone.")
 
 (defconst eif-operator-regexp
   (concat "[ \t]*\\([@*/+]\\|-[^-]\\|\\<\\("
-	  (mapconcat 'identity eif-operator-keyword-list "\\|")
+	  eif-operator-keywords
 	  "\\)[ \t(]\\)")
-  "Eiffel operators - used to identify continuation lines.")
+  "Eiffel operators - used to identify continuation lines.
+See `eif-operator-keywords'.")
 
 (defconst eif-operator-eol-regexp
   ".*\\([@*/+-]\\|\\<and\\|\\<or\\|\\<implies\\|:=\\)[ \t]*\\(--.*\\)?$"
   "Eiffel operators - used to identify continuation lines.")
+
+(defconst eif-misc-keywords
+  (concat "agent\\|all\\|as\\|create\\|frozen\\|infix\\|like" "\\|"
+	  "old\\|precursor\\|prefix\\|strip\\|unique\\|xor")
+  "Eiffel miscellaneous keywords.")
 
 (defconst eif-preprocessor-regexp
   "#\\(define\\|undefine\\|ifdef\\|else\\|endif\\|ifndef\\|include\\)[ \t]"
@@ -825,12 +823,12 @@ See `eif-indentation-keywords'.")
 
 (defconst eif-all-keywords
   (concat eif-indentation-keywords "\\|" "then\\|end")
-  "Regexp matching any eiffel keyword in a line.
+  "Regexp matching (nearly) any eiffel keyword in a line.
 Does not include `is'.")
 
 (defconst eif-all-keywords-regexp
   (eif-post-anchor eif-all-keywords)
-  "Anchored regexp matching any eiffel keyword in a line.
+  "Anchored regexp matching (nearly) any eiffel keyword in a line.
 Does not include `is'.  See `eif-all-keywords'.")
 
 (defconst eif-non-source-line          "[ \t]*\\(--.*\\)?$"
@@ -899,13 +897,20 @@ This will also match local variable and parameter declarations.")
   (append
    eiffel-font-lock-keywords-1
    `(;; major keywords
+     ;;;;("\\(\\(^[ \t]*\\|[ \t]+\\)creation\\|^deferred[ \t]+class\\|expanded[ \t]+class\\|reference[ \t]+class\\|^class\\|^feature\\|^indexing\\|\\(^[ \t]*\\|[ \t]+\\)inherit\\|^obsolete\\)[ \t\n]" 0 font-lock-keyword-face ni)
      (;; Lost "expanded class" and "reference class" when not at "^\s-*"???
       ,(concat "\\(^\\s-*\\(" eif-class-level-keywords
 	       "\\|obsolete\\S_\\)\\|[ \t]+\\(creation\\|inherit\\)\\S_\\)")
       0 font-lock-keyword-face nil)
      ;; assertions
      (,(eif-anchor "check\\|ensure then\\|ensure\\|invariant\\|require else\\|require\\|variant") 2 font-lock-reference-face nil)
-     ;; minor keywords
+     ;; Minor keywords: the first 4 can appear in conjunction with
+     ;; other keywords, and the anchored regexp doesn't cater for
+     ;; overlaps.
+     (,(eif-anchor "is") 2 font-lock-keyword-face nil)
+     (,(eif-anchor eif-operator-keywords) 2 font-lock-keyword-face nil)
+     (,(eif-anchor "not") 2 font-lock-keyword-face nil)
+     (,(eif-anchor eif-misc-keywords) 2 font-lock-keyword-face nil)
      (,(eif-anchor eif-all-keywords) 2 font-lock-keyword-face nil)
      ;; quoted expr's in comments
      ("`[^`'\n]*'" 0 font-lock-string-face t)
@@ -2365,14 +2370,9 @@ point."
     (if (> eif-paren-depth 0) eif-ind-val -1)))
 
 ;; ----------------------------------------------------------------------
-;; imenu support, great for browsing foreign code
-;; not really fail-safe, normal Eiffel code will work, but you can break
-;; this easily if you follow strange formatting rules.
+;; imenu support, great for browsing foreign code.
+;; Originally contributed by Berend de Boer <berend@pobox.com>.
 ;; ----------------------------------------------------------------------
-
-;; OK, I think this wants to be reimplemented using
-;; eif-{beginning,end}-of-feature, so those functions need to be fixed
-;; first using the regular expressions from Karl's font-locking code.
 
 (defun eif-imenu-add-menubar-by-position ()
   "Add menu of features of a class, sorted in order of occurence."
