@@ -55,7 +55,6 @@
 ;;    (autoload 'eiffel-mode "eiffel-mode" "Major mode for Eiffel programs" t)
 ;;
 
-
 ;;; History:
 ;; 
 
