@@ -2183,5 +2183,9 @@ point."
 	  (setq eif-ind-val (current-column)))))
     (if (> eif-paren-depth 0) eif-ind-val -1)))
 
+;; XEmacs addition
+;;;###autoload
+(add-to-list 'auto-mode-alist '("\\.e\\'" . eiffel-mode))
+
 (provide 'eiffel)
 ;;; eiffel.el ends here
