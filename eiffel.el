@@ -11,6 +11,7 @@
 ;; Maintainer: martins@linuxcare.com
 ;; Version: $Id$
 ;; Keywords: eiffel languages oop
+;; Requires: font-lock, compile, easymenu
 
 ;; This file is derived from eiffel4.el from Tower Technology Corporation.
 ;;
@@ -61,6 +62,10 @@
 
 ;;; Code:
 
+(require 'font-lock)
+(require 'compile)
+(require 'easymenu)
+
 (defgroup eiffel nil
   "Eiffel mode for Emacs"
   :group 'oop)
@@ -75,6 +80,10 @@
   :prefix "eif-"
   :group 'eiffel)
 
+(defun eif-customize ()
+  "Run \\[customize-group] for the `eiffel' group."
+  (interactive)
+  (customize-group 'eiffel))
 
 ;; Indentation amount variables.
 ;;
@@ -253,7 +262,6 @@ line.  Can be negative."
   '((eiffel-font-lock-keywords)
     nil nil nil nil))
 
-(require 'font-lock)
 (and (boundp 'font-lock-defaults-alist)
      (add-to-list 'font-lock-defaults-alist
 		  (cons 'eiffel-mode
@@ -305,7 +313,6 @@ Possibly used for error location.")
 (defvar eif-run-command nil
   "Current command to run after Eiffel compile.")
 
-(require 'compile)
 (defun eif-compile ()
   "Compile an Eiffel root class."
   (interactive)
@@ -824,7 +831,7 @@ constructs do not require correct indentation of the preceding line."
 	  (forward-line -1)
 	  (beginning-of-line)
 	  (while (and (looking-at eif-non-source-line) (not (= (point) 1)))
-	    (previous-line 1)
+	    (forward-line -1)
 	    (beginning-of-line))
 	  (if (eif-line-contains-close-paren)
 	      (backward-sexp))
@@ -1233,7 +1240,7 @@ construct, then only that line is indented"
       (setq end-point (eif-matching-line t 'forward))
       (while (< (point) end-point)
 	(eif-indent-line)
-	(next-line 1)
+	(forward-line 1)
 	(beginning-of-line)))))
 
 (defun eif-indent-region (&optional start end)
@@ -1248,7 +1255,7 @@ The region may be specified using optional arguments START and END."
 	     (while (< (point) end-point)
 	       (if (not (looking-at "[ 	]*$"))
 		   (eif-indent-line))
-	       (next-line 1)
+	       (forward-line 1)
 	       (beginning-of-line)))
 	    (t (error "Buffer must be in eiffel mode"))))))
 
@@ -1328,6 +1335,16 @@ does matching of parens ala \\[backward-sexp]'."
 (defvar eiffel-mode-map nil
   "Keymap for Eiffel mode.")
 
+(if eiffel-mode-map
+    nil
+  (let ((map (make-sparse-keymap)))
+    (define-key map [(control j)]      'eif-newline)
+    (define-key map [(return)]         'eif-indent-and-newline)
+    (define-key map [(meta control q)] 'eif-indent-construct)
+    (define-key map [(meta \')]        'eif-feature-quote)
+    (define-key map [(meta q)]         'eif-fill-paragraph)
+    (setq eiffel-mode-map map)))
+
 (defvar eiffel-mode-syntax-table nil
   "Syntax table in use in Eiffel-mode buffers.")
 
@@ -1381,18 +1398,6 @@ does matching of parens ala \\[backward-sexp]'."
     (modify-syntax-entry ?. "." table)
     (setq eiffel-mode-syntax-table table)))
 
-(if eiffel-mode-map
-    nil
-  (setq eiffel-mode-map (make-sparse-keymap))
-  (define-key eiffel-mode-map [(tab)] 'eif-indent-line)
-  (define-key eiffel-mode-map [(control j)] 'eif-newline)
-  (define-key eiffel-mode-map [(return)] 'eif-indent-and-newline)
-  (define-key eiffel-mode-map [(meta control q)] 'eif-indent-construct)
-  (define-key eiffel-mode-map [(meta \')] 'eif-feature-quote)
-  (define-key eiffel-mode-map [(meta q)] 'eif-fill-paragraph))
-
-(require 'easymenu)
-
 (defun eif-add-menu ()
   "Add the \"Eiffel\" menu to the menu bar."
 
@@ -1410,19 +1415,33 @@ does matching of parens ala \\[backward-sexp]'."
 		["Short..."              eif-short   t]
 		["----------" nil nil]))
 	   (list
-	    ["Indent Construct"     eif-indent-construct t]
+	    ["Indent Construct"    eif-indent-construct t]
 	    ["----------" nil nil]
 	    (list "Comments"
 		  ["Feature Quote" eif-feature-quote  (eif-in-comment-p)]
-		  ["Fill         " eif-fill-paragraph (eif-in-comment-p)]))))
+		  ["Fill         " eif-fill-paragraph (eif-in-comment-p)])
+	    ["----------" nil nil]
+            ["Customize"           eif-customize     t])))
   (easy-menu-add eiffel-mode-menu))
 
 ;;;###autoload
 (defun eiffel-mode ()
-  "Major mode for editing Eiffel programs."
+  "Major mode for editing Eiffel programs.
+\\[indent-for-tab-command] indents the current Eiffel line correctly and
+\\[eif-indent-and-newline] causes the current and next line to be
+properly indented.
+
+Key definitions:
+\\{eiffel-mode-map}
+
+If variable `eif-use-gnu-eiffel' is non-nil (default t) then support
+for using GNU Small Eiffel is enabled.  Run \\[eif-customize] to see
+compilation and indentation variables that can be customized."
 
   (interactive)
+
   (kill-all-local-variables)
+
   (setq major-mode 'eiffel-mode)
   (setq mode-name "Eiffel")
 
@@ -1437,7 +1456,6 @@ does matching of parens ala \\[backward-sexp]'."
     (define-key eiffel-mode-map "\C-c\C-r" nil)
     (define-key eiffel-mode-map "\C-c\C-s" nil))
     
-
   (use-local-map eiffel-mode-map)
   (eif-add-menu)
   (set-syntax-table eiffel-mode-syntax-table)
@@ -1454,6 +1472,7 @@ does matching of parens ala \\[backward-sexp]'."
   (make-local-variable 'comment-end)
   (make-local-variable 'comment-column)
   (make-local-variable 'comment-start-skip)
+  (make-local-variable 'font-lock-defaults)
   ;; Now set their values.
   (setq paragraph-start              (concat "^$\\|" page-delimiter)
 	paragraph-separate           paragraph-start
@@ -1465,7 +1484,8 @@ does matching of parens ala \\[backward-sexp]'."
 	comment-start                "-- "
 	comment-end                  ""
 	comment-column               32
-	comment-start-skip           "--+ *")
+	comment-start-skip           "--+ *"
+	font-lock-defaults           eiffel-font-lock-defaults)
 
   (setq auto-fill-function 'eif-auto-fill)
   (run-hooks 'eiffel-mode-hook))
@@ -1602,12 +1622,12 @@ Comments that are not the only thing on a line return nil as their prefix."
 	      (setq para-begin (1+ (point))))
 	    (goto-char current-point)
 	    (setq last-point (point))
-	    (next-line 1)
+	    (forward-line 1)
 	    (end-of-line)
 	    (while (and (not (= (point) last-point))
 			(eif-comment-prefix))
 	      (setq last-point (point))
-	      (next-line 1)
+	      (forward-line 1)
 	      (end-of-line))
 	    (if (= (point) last-point)
 		(setq para-end (point))
