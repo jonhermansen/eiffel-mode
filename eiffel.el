@@ -301,9 +301,7 @@ Possibly used for error location.")
 
 (defun eif-compile ()
   "Compile an Eiffel root class."
-
   (interactive)
-
   (let ((temp last-nonmenu-event))
 	 
     (setq eif-compile-dir (file-name-directory (buffer-file-name)))
@@ -328,7 +326,6 @@ Possibly used for error location.")
 
 (defun eif-set-compile-options ()
   "Set Eiffel compiler options."
-
   (interactive)
   (setq eif-compile-options
 	(read-string "Eiffel compiler options: " eif-compile-options)))
@@ -370,7 +367,6 @@ at the end of STRING, we don't include a null substring for that."
 (defun eif-run ()
   "Run a compiled Eiffel program."
   (interactive)
-
   (setq eif-run-command
 	(read-string "Command to run: "
 		     (or eif-run-command
@@ -398,7 +394,6 @@ at the end of STRING, we don't include a null substring for that."
 (defun eif-short ()
   "Display the short form of an Eiffel class."
   (interactive)
-
   (let* ((class	(read-string
 		 "Class or file: "
 		 (if (buffer-file-name)
