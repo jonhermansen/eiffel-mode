@@ -328,7 +328,7 @@ in Debian GNU/Linux, when the default value is \"se-compile\"."
 ;; eif-{beginning,end}-of-feature.
 
 (defconst eif-routine-begin-regexp
-  "[a-z_][^-:(\n]*\\([^-)\n]*\\<is\\>\\s-*\\(--.*\\)?$\\|([^-:'\"\n]+:\\)"
+  "[a-z_][^-:()\n]*\\([^-)\n]*\\<is\\>\\s-*\\(--.*\\)?$\\|([^-:'\"\n]+:\\)"
   "Regexp matching the beginning of an Eiffel routine declaration.")
 
 (defconst eif-attribute-regexp
