@@ -616,7 +616,7 @@ See `eif-operator-keywords'.")
 
 (defconst eif-misc-keywords
   (concat "agent\\|all\\|as\\|frozen\\|infix\\|like" "\\|"
-	  "old\\|precursor\\|prefix\\|strip\\|unique\\|xor" "\\|"
+	  "old\\|precursor\\|prefix\\|retry\\|strip\\|unique\\|xor" "\\|"
 	  "expanded\\|reference")
   "Eiffel miscellaneous keywords.")
 
