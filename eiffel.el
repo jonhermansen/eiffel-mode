@@ -399,6 +399,11 @@ See also `c-font-lock-extra-types'.")
 		  (cons 'eiffel-mode
 			eiffel-font-lock-defaults)))
 
+;; font-lock faces used by GNU Emacs and XEmacs are inconsistent.
+(if (and (not (boundp 'font-lock-constant-face))
+	 (fboundp 'copy-face))
+    (copy-face 'font-lock-variable-name-face 'font-lock-constant-face))
+
 ;;
 ;; No user-customizable definitions below this point.
 ;;
@@ -2196,26 +2201,29 @@ point."
 ;; this easily if you follow strange formatting rules.
 ;; ----------------------------------------------------------------------
 
+;; OK, I think this wants to be reimplemented using
+;; eif-{beginning,end}-of-feature, so those functions need to be fixed
+;; first using the regular expressions from Karl's font-locking code.
+
 (defun eif-imenu-add-menubar-by-position ()
-  "Generates an index of all features of a class, sorted in order of occurence."
+  "Add menu of features of a class, sorted in order of occurence."
   (interactive)
   (setq imenu-create-index-function  'eif-imenu-create-index-by-position)
   (imenu-add-to-menubar "Eiffel features")
   )
 
 (defun eif-imenu-add-menubar-by-name ()
-  "Generates an index of all features of a class, sorted by name."
+  "Add menu of features of a class, sorted by name."
   (interactive)
   (setq imenu-create-index-function  'eif-imenu-create-index-by-name)
   (imenu-add-to-menubar "Eiffel names"))
 
 (defun eif-imenu-create-index-by-position ()
-  "Generates an index of all features of a class, sorted in order of
-   occurence."
+  "Generate index of features of a class, sorted in order of occurence."
   (eif-imenu-create-index 0))
 
 (defun eif-imenu-create-index-by-name ()
-  "Generates an index of all features of a class, sorted by name."
+  "Generate index of features of a class, sorted by name."
   (eif-imenu-create-index 1))
 
 (defun eif-imenu-scan-for-names (prefix)
