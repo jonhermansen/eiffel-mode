@@ -272,9 +272,9 @@ line.  Can be negative."
   (if (file-executable-p "/usr/bin/se-compile")
       "se-compile" 
     "compile")
-  "*Program to use for compiling Eiffel programs.
-The default is \"compile\".  In Debian GNU/Linux this is probably
-\"se-compile\"."
+  "*Program to use for compiling Eiffel programs.  The default is
+\"compile\", unless \"/usr/bin/se-compile\" exists, as in Debian
+GNU/Linux, when the default value is \"se-compile\"."
   :type 'string
   :group 'eiffel-compile)
 
@@ -287,6 +287,10 @@ The default is \"compile\".  In Debian GNU/Linux this is probably
   "*Options to use for compiling Eiffel programs."
   :type 'string
   :group 'eiffel-compile)
+
+;;
+;; No user-customizable definitions below this point.
+;;
 
 (defvar eif-compile-dir nil
   "Current directory where Eiffel compilations are taking place.
@@ -411,74 +415,63 @@ at the end of STRING, we don't include a null substring for that."
       (toggle-read-only 1))))
 
 ;;
-;; No user-customizable definitions below this point.
+;; Indentation macros.
 ;;
 
 (defmacro eif-class-level-kw-indent-m ()
   "Indentation amount for Class level keywords (in number of spaces)."
   '(+ (* eif-class-level-kw-indent eif-indent-increment)
-     eif-extra-class-level-kw-indent)
-)
+     eif-extra-class-level-kw-indent))
 
 (defmacro eif-class-level-comment-indent-m ()
   "Indentation amount for Class level comments (in number of spaces)."
   '(+ (* eif-class-level-comment-indent eif-indent-increment)
-     eif-extra-class-level-comment-indent)
-)
+     eif-extra-class-level-comment-indent))
 
 (defmacro eif-inherit-level-kw-indent-m ()
   "Indentation amount for Inherit level keywords (in number of spaces)."
   '(+ (* eif-inherit-level-kw-indent eif-indent-increment)
-     eif-extra-inherit-level-kw-indent)
-)
+     eif-extra-inherit-level-kw-indent))
 
 (defmacro eif-feature-level-indent-m ()
   "Indentation amount for features (in number of spaces)."
   '(+ (* eif-feature-level-indent eif-indent-increment)
-     eif-extra-feature-level-indent)
-)
+     eif-extra-feature-level-indent))
 
 (defmacro eif-feature-level-kw-indent-m ()
   "Indentation amount for Feature level keywords (in number of spaces)."
   '(+ (* eif-feature-level-kw-indent eif-indent-increment)
-     eif-extra-feature-level-kw-indent)
-)
+     eif-extra-feature-level-kw-indent))
 
 (defmacro eif-body-comment-indent-m ()
   "Indentation amount for comments in routine bodies (in number of spaces)."
   '(+ (* eif-body-comment-indent eif-indent-increment)
-     eif-extra-body-comment-indent)
-)
+     eif-extra-body-comment-indent))
 
 (defmacro eif-feature-level-comment-indent-m ()
   "Indentation amount for Feature level comments (in number of spaces)."
   '(+ (* eif-feature-level-comment-indent eif-indent-increment)
-     eif-extra-feature-level-comment-indent)
-)
+     eif-extra-feature-level-comment-indent))
 
 (defmacro eif-check-keyword-indent-m ()
   "Indentation amount for Check keyword (in number of spaces)."
   '(+ (* eif-check-keyword-indent eif-indent-increment)
-     eif-extra-check-keyword-indent)
-)
+     eif-extra-check-keyword-indent))
 
 (defmacro eif-rescue-keyword-indent-m ()
   "Indentation amount for Rescue keyword (in number of spaces)."
   '(+ (* eif-rescue-keyword-indent eif-indent-increment)
-     eif-extra-rescue-keyword-indent)
-)
+     eif-extra-rescue-keyword-indent))
 
 (defmacro eif-then-indent-m ()
   "Indentation amount for `then' appearing on a line by itself (in number of spaces)."
   '(+ (* eif-then-indent eif-indent-increment)
-     eif-extra-then-indent)
-)
+     eif-extra-then-indent))
 
 (defmacro eif-continuation-indent-m ()
   "Indentation amount for a statement continuation line (in number of spaces)."
   '(+ (* eif-continuation-indent eif-indent-increment)
-     eif-extra-continuation-indent)
-)
+     eif-extra-continuation-indent))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;          Keyword Regular Expression Variables.               ;;
@@ -538,7 +531,8 @@ If these occur prior to an `eif-control-flow-keyword' then the
 is part of this list but it is handled separately in the functions
 \[eif-matching-indent\] and \[eif-matching-kw\].")
 
-(defconst eif-check-keyword "check"  "The `check' keyword.")
+(defconst eif-check-keyword "check"
+  "The `check' keyword.")
 
 (defconst eif-check-keywords   "\\(check\\)[^a-z0-9_]"
   "The `check' keyword (with trailing context).")
@@ -1566,7 +1560,6 @@ Comments that are not the only thing on a line return nil as their prefix."
 
 (defun eif-auto-fill ()
   "Auto-fill an Eiffel comment."
-  ;; Check this documentation string!
   (let ((fill-prefix (eif-comment-prefix))
 	(pm (point-marker)))
     (if (and (> (current-column) fill-column)
