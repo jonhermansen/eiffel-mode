@@ -707,15 +707,22 @@ This will also match local variable and parameter declarations.")
 (defconst eiffel-font-lock-keywords-2
   (append
    eiffel-font-lock-keywords-1
-   `(;; major keywords
+   `(;; Major keywords.  Can probably be rolled into the Minor
+     ;; keywords, since they all use the keyword face.
      ;;;;("\\(\\(^[ \t]*\\|[ \t]+\\)creation\\|^deferred[ \t]+class\\|expanded[ \t]+class\\|reference[ \t]+class\\|^class\\|^feature\\|^indexing\\|\\(^[ \t]*\\|[ \t]+\\)inherit\\|^obsolete\\)[ \t\n]" 0 font-lock-keyword-face ni)
      (;; Lost "expanded class" and "reference class" when not at "^\s-*"???
       ,(concat "\\(^\\s-*\\(" eif-class-level-keywords
 	       "\\|obsolete\\S_\\)\\|[ \t]+\\(creation\\|inherit\\)\\S_\\)")
       0 font-lock-keyword-face nil)
-     ;; assertions
+
+     ;; Assertions.
      (,(eif-anchor "check\\|ensure then\\|ensure\\|invariant\\|require else\\|require\\|variant") 2 font-lock-reference-face nil)
+
+     ;; Preprocessor keywords.  Note that, by luck more than planning,
+     ;; these aren't font-locked when they're not indented, since the
+     ;; '#' isn't a word boundary (which is added by eif-anchor).
      (,(eif-anchor eif-preprocessor-keywords) 3 font-lock-builtin-face nil)
+
      ;; Minor keywords: the first 4 can appear in conjunction with
      ;; other keywords, and the anchored regexp doesn't cater for
      ;; overlaps.
@@ -724,9 +731,11 @@ This will also match local variable and parameter declarations.")
      (,(eif-anchor "not")                 2 font-lock-keyword-face nil)
      (,(eif-anchor eif-misc-keywords)     2 font-lock-keyword-face nil)
      (,(eif-anchor eif-all-keywords)      2 font-lock-keyword-face nil)
-     ;; quoted expr's in comments
+
+     ;; Quoted expr's in comments.
      ("`[^`'\n]*'" 0 font-lock-string-face t)
-     ;; classes
+
+     ;; Classes.
      (,(eif-anchor eif-standard-class-keywords) 2 font-lock-type-face)))
    "Regular expressions to use with font-lock mode and level 2 fontification.")
 
@@ -1222,7 +1231,7 @@ constructs do not require correct indentation of the preceding line."
 		     (setq indent (eif-feature-level-kw-indent-m))
 		   ;; Else - class obsolete
 		   (setq indent (eif-class-level-kw-indent-m))))
-		((looking-at eif-preprocessor-keywords)
+		((looking-at eif-preprocessor-keywords-regexp)
 		 (setq indent (eif-preprocessor-indent-m))))
 
 	;; Else no keyword on current line,
