@@ -1574,33 +1574,22 @@ compilation and indentation variables that can be customized."
   (or (eif-in-comment-p)
       (eif-in-quoted-string-p)))
   
-
-;; This doesn't match when you're on the comment delimiter.  Does it
-;; matter?
-(defsubst eif-in-comment-p ()
+(defun eif-in-comment-p ()
   "Return t if point is in a comment."
-  (interactive)
-  (save-excursion
-    (nth 4 (parse-partial-sexp
-	    (save-excursion (beginning-of-line) (point))
-	    (point)))))
-
-;; (defun eif-in-comment-p ()
-;;   "Return t if point is in a comment."
-;;   (let ((pos (point))
-;; 	(eol (save-excursion (end-of-line) (point))))
-;;     (save-excursion
-;;       (beginning-of-line)
-;;       (let ((bol (point)))
-;; 	;; Skip things that look like comments but are in a string.
-;; 	(while (and (re-search-forward comment-start-skip eol t)
-;; 		    ;; Avoid corner case: -- "blah"
-;; 		    (progn (backward-char 1) t)
-;; 		    (eif-in-quoted-string-p)))
-;; 	;; Now go back and find that comment, if there was one.
-;; 	(and (re-search-backward comment-start-skip bol t)
-;; 	     (>= pos (point))
-;; 	     (not (eif-in-quoted-string-p)))))))
+  (let ((pos (point))
+ 	(eol (save-excursion (end-of-line) (point))))
+    (save-excursion
+      (beginning-of-line)
+      (let ((bol (point)))
+ 	;; Skip things that look like comments but are in a string.
+ 	(while (and (re-search-forward comment-start-skip eol t)
+ 		    ;; Avoid corner case: -- "blah"
+ 		    (progn (backward-char 1) t)
+ 		    (eif-in-quoted-string-p)))
+ 	;; Now go back and find that comment, if there was one.
+ 	(and (re-search-backward comment-start-skip bol t)
+ 	     (>= pos (point))
+ 	     (not (eif-in-quoted-string-p)))))))
 
 ;; ENHANCEME: Currently eif-beginning-of-feature only works for
 ;;            routines (`is' is crucial).  It should be made more
