@@ -585,7 +585,7 @@ function as more than one type of keyword.")
   "The `end' keyword with context.")
 
 (defconst eif-end-matching-keywords
-  "\\(check\\|class\\|debug\\|feature\\|rename\\|redefine\\|undefine\\|select\\|export\\|do\\|once[ \t\n]*[^\" \t\n]\\|deferred\\|separate\\|external\\|alias\\|if\\|inspect\\|from\\|debug\\)[^a-z0-9_]"
+  "\\(check\\|class\\|debug\\|feature\\|rename\\|redefine\\|undefine\\|select\\|export\\|do\\|once[ \t\n]+[^\"]\\|deferred\\|separate\\|external\\|alias\\|if\\|inspect\\|from\\|debug\\)[^a-z0-9_]"
   "Those keywords whose clause is terminated by an `end' keyword.")
 
 (defconst eif-control-flow-keywords
