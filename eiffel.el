@@ -858,7 +858,7 @@ constructs do not require correct indentation of the preceding line."
 		(setq indent (eif-manifest-array-indent)))
 	    
 	    ;; multi-line parenthesis expression
-	    ;; Move string continuation lines one column to the left
+	    ;; Move string continuation lines as per configuration.
 	    (if (looking-at "%")
 		(setq indent (+ indent (eif-string-continuation-indent-m))))
 	  
