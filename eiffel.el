@@ -673,7 +673,7 @@ Does not include `is'.  See `eif-all-keywords'.")
 ;; eif-{beginning,end}-of-feature.
 
 (defconst eif-routine-begin-regexp
-  "[a-z_][^-:()\n]*\\([^-)\n]*\\<is\\>\\s-*\\(--.*\\)?$\\|([^-:'\"\n]+:\\)"
+  "\\([a-z_][a-zA-Z_0-9]*\\)\\s-*\\(([^)]*)\\)?\\s-*\\(:\\s-*[A-Z][A-Za-z0-9_]*\\)?\\s-*\\<is\\>\\s-*\\(--.*\\)?$"
   "Regexp matching the beginning of an Eiffel routine declaration.")
 
 (defconst eif-attribute-regexp
@@ -717,12 +717,7 @@ This will also match local variable and parameter declarations.")
   `(;; hidden comments
     ("--|.*" 0 font-lock-keyword-face t)
     ;; routines
-    (,(concat "^[ \t]*" eif-routine-begin-regexp) (0 nil)
-     ;; will try to refontify occurences of `prefix "..."' and `infix "..."'
-     ;;(no problem if strings are already fontified)
-     ("\\s-*\\(\\<[a-z][a-zA-Z_0-9 \"@#|&]*\\)\\(,\\|[:(].*\\|is.*\\)"
-      (beginning-of-line) (end-of-line)
-      (1 font-lock-function-name-face))))
+    (,(concat "^[ \t]*" eif-routine-begin-regexp) 1 font-lock-function-name-face ))
   "Regular expressions to use with font-lock mode.")
 
 (defconst eiffel-font-lock-keywords-2
