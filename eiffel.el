@@ -1616,6 +1616,9 @@ does matching of parens ala \\[backward-sexp]'."
 	   (list
 	    ["Indent Construct"    eif-indent-construct t]
 	    ["----------" nil nil]
+	    (list "Imenu"
+		  ["By position"   eif-imenu-add-menubar-by-position t]
+		  ["By name"       eif-imenu-add-menubar-by-name     t])
 	    (list "Comments"
 		  ["Feature Quote" eif-feature-quote  (eif-in-comment-p)]
 		  ["Fill         " eif-fill-paragraph (eif-near-comment-p)])
@@ -1673,6 +1676,7 @@ compilation and indentation variables that can be customized."
   (make-local-variable 'comment-column)
   (make-local-variable 'comment-start-skip)
   (make-local-variable 'font-lock-defaults)
+  (make-local-variable 'imenu-create-index-function)
   ;; Now set their values.
   (setq paragraph-start              (concat "^$\\|" page-delimiter)
 	paragraph-separate           paragraph-start
@@ -2185,6 +2189,131 @@ point."
 	  (skip-chars-forward " \t")
 	  (setq eif-ind-val (current-column)))))
     (if (> eif-paren-depth 0) eif-ind-val -1)))
+
+;; ----------------------------------------------------------------------
+;; imenu support, great for browsing foreign code
+;; not really fail-safe, normal Eiffel code will work, but you can break
+;; this easily if you follow strange formatting rules.
+;; ----------------------------------------------------------------------
+
+(defun eif-imenu-add-menubar-by-position ()
+  "Generates an index of all features of a class, sorted in order of occurence."
+  (interactive)
+  (setq imenu-create-index-function  'eif-imenu-create-index-by-position)
+  (imenu-add-to-menubar "Eiffel features")
+  )
+
+(defun eif-imenu-add-menubar-by-name ()
+  "Generates an index of all features of a class, sorted by name."
+  (interactive)
+  (setq imenu-create-index-function  'eif-imenu-create-index-by-name)
+  (imenu-add-to-menubar "Eiffel names"))
+
+(defun eif-imenu-create-index-by-position ()
+  "Generates an index of all features of a class, sorted in order of
+   occurence."
+  (eif-imenu-create-index 0))
+
+(defun eif-imenu-create-index-by-name ()
+  "Generates an index of all features of a class, sorted by name."
+  (eif-imenu-create-index 1))
+
+(defun eif-imenu-scan-for-names (prefix)
+  "within feature, scan for names"
+  (let ((menu nil))
+    (while (and
+            (search-forward-regexp "#?[a-z_][a-z0-9_]*" nil t)
+            (not (or
+                  (string= "feature" (match-string 0))
+                  (string= "invariant" (match-string 0))
+                  (string= "end" (match-string 0))
+                  )))
+
+      ;; skip to next line if we have a gepp directive
+      (if (= ?# (string-to-char (match-string 0)))
+          (forward-line)
+
+        ;; else, name is always a method or property
+        (let ((start (match-beginning 0)))
+          (setq menu
+                (cons (cons (concat prefix (match-string 0))
+                            start)
+                      menu))
+        )
+        ;; if comma follows, we have an alias, skip over comma and
+        ;; position cursor so that alias is parsed
+        (if (looking-at "[ \t]*,[ \t]*")
+            (goto-char (match-end 0))
+          ;; else employ brain-dead heuristic that if line ends with
+          ;; 'is', a method follows, else we have property...
+          (if (looking-at ".*is[ \t]*$")
+              (cond (
+                     (forward-line 1)
+                     (let ((end-counter 1))
+                       (while (> end-counter 0)
+                         (search-forward-regexp "\\(\\(--.*$\\)\\|\\b\\(end\\|if\\|from\\|inspect\\|check\\|debug\\)\\b\\)" nil t)
+                         (if (equal (match-string 2) nil)
+                             (cond (
+                                    (if (string= "end" (match-string 3))
+                                        (setq end-counter (- end-counter 1))
+                                      (setq end-counter (+ end-counter 1))))))
+                         (if (equal (match-string 1) nil)
+                             (setq end-counter 0))
+                         ))))
+            (forward-line)
+            (while (looking-at "^[ \t]*--") (forward-line))
+            )
+          )
+        )
+      )
+    menu)
+  )
+
+
+(defun eif-imenu-create-index (sort-method)
+  "Generates an index of all features of a class. Sort by position of
+   sort-method is 0. Sort by name if sort-method is 1"
+  (let (menu prev-pos feature-description prefix)
+    (goto-char (point-min))
+    (imenu-progress-message prev-pos 0)
+    (modify-syntax-entry ?_  "w  ")
+
+    (if (= sort-method 0)
+        (setq prefix "  ")
+      (setq prefix nil))
+
+    ;; scan for features
+    (while (search-forward-regexp "^[ \t]*feature\\([ \t]+\\({[^}]+}[ \t]+\\)?--[ \t]*\\(.*\\)$\\)?" nil t)
+      (imenu-progress-message prev-pos nil t)
+      (let ((start (match-beginning 0)))
+        (if (equal (match-string 3) nil)
+            (setq feature-description "(no description)")
+          (setq feature-description (match-string 3)))
+        (if (= sort-method 0)
+            (setq menu
+                  (cons (cons feature-description start)
+                        menu))
+          )
+        )
+
+      ;; extend menu with names appearing within this feature
+      (setq menu (append menu (eif-imenu-scan-for-names prefix)))
+      ;; reposition cursor to beginning of last match, might be a feature
+      (goto-char (match-beginning 0))
+
+      )
+
+    ;; restore Eifel mode idea of a word
+    (modify-syntax-entry ?_  "_  ")
+    (imenu-progress-message prev-pos 100)
+
+    ;; sort in increasing buffer position order or by name
+    (if (= sort-method 0)
+        (sort menu (function (lambda (a b) (< (cdr a) (cdr b)))))
+      (sort menu (function (lambda (a b) (string< (car a) (car b)))))
+      )
+    )
+  )
 
 ;; XEmacs addition
 ;;;###autoload
