@@ -1093,13 +1093,9 @@ If the value of direction is 'backward, the function acts as if a
 direction parameter is to locate either the opening or closing keyword
 of the syntactic construct containing the point."
   (let ((nesting-level 0)
-	(matching-point nil)
 	(search-end 0)
-	(opening-keyword nil)
-	(match-start nil)
-	(match-end nil)
-	(success   nil)
-	(start-point nil))
+	matching-point opening-keyword match-start match-end
+	success start-point)
     (unwind-protect
 	(save-excursion
 	  (modify-syntax-entry ?_  "w  ")
@@ -1539,8 +1535,7 @@ Comments that are not the only thing on a line return nil as their prefix."
 	     (re-search-backward "^[ \t]*%\\|[^%]\"" nil t)
 	     (re-search-forward "%\\|\"" nil t)
 	     (setq len (1- (current-column)))
-	     (concat (make-string len ? ) "%"))
-	    (t	nil)))))
+	     (concat (make-string len ? ) "%"))))))
 
 (defun eif-auto-fill ()
   "Auto-fill an Eiffel comment."
@@ -1570,10 +1565,8 @@ Comments that are not the only thing on a line return nil as their prefix."
   (interactive)
   (save-excursion
     (let ((current-point (point))
-	  (last-point nil)
-	  (para-begin nil)
-	  (para-end   nil)
-	  (fill-prefix (eif-comment-prefix)))
+	  (fill-prefix (eif-comment-prefix))
+	  last-point para-begin para-end)
       (if fill-prefix
 	  (progn
 	    (setq last-point (point))
@@ -1663,8 +1656,9 @@ Returns t if successful, nil if not."
 (defun eif-manifest-array-indent ()
   "Determine if we are inside of a manifest array."
   (interactive)
-  (let ((paren-count 0) (indent nil)
-	(limit 0))
+  (let ((paren-count 0)
+	(limit 0)
+	indent)
     (save-excursion
       (if (= eif-last-feature-level-indent (eif-feature-level-indent-m))
 	  (setq limit
@@ -1692,8 +1686,9 @@ Returns t if successful, nil if not."
 (defun eif-manifest-array-start ()
   "Determine the indentation of the statement containing a manifest array."
   (interactive)
-  (let ((paren-count 0) (indent nil)
-	(limit 0))
+  (let ((paren-count 0)
+	(limit 0)
+	indent)
     (save-excursion
       (if (= eif-last-feature-level-indent (eif-feature-level-indent-m))
 	  (setq limit
