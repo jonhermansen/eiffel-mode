@@ -449,7 +449,7 @@ See `eif-feature-level-keywords'.")
   "Keywords which introduce control-flow constructs.")
 
 (defconst eif-control-flow-matching-keywords
-  (concat "deferred\\|do\\|once[ \t\n]+[^\"]" "\\|" eif-control-flow-keywords)
+  (concat "deferred\\|do\\|once" "\\|" eif-control-flow-keywords)
   "Keywords that may cause the indentation of an `eif-control-flow-keyword'.
 If these occur prior to an `eif-control-flow-keyword' then the
 `eif-control-flow-keyword' is indented.  Note that technically, `end'
@@ -582,6 +582,10 @@ If one of these occurs prior to an `eif-obsolete-keyword' then the
   (eif-word-anchor eif-indentation-keywords)
   "Regexp of keywords that match any eiffel keyword triggering indentation.
 See `eif-indentation-keywords'.")
+
+(defconst eif-once-non-indent-regexp
+  "\\s-*once\\(\\s-\\|\n\\)+\""
+  "Regexp of Eiffel once keyword in context not affecting indentation.")
 
 (defconst eif-feature-indentation-keywords-regexp
   (eif-word-anchor "creation\\|feature")
@@ -735,7 +739,7 @@ This will also match local variable and parameter declarations.")
      ;; Keywords.  The first few can appear in conjunction with other
      ;; keywords, and the anchored regexp doesn't cater for overlaps,
      ;; thus there are several entries here.
-     (,(eif-anchor "class\\|is\\|not\\|once") 2 font-lock-keyword-face nil)
+     (,(eif-anchor "class\\|is\\|not")        2 font-lock-keyword-face nil)
      (,(eif-anchor eif-operator-keywords)     2 font-lock-keyword-face nil)
      (,(eif-anchor eif-misc-keywords)         2 font-lock-keyword-face nil)
      (,(eif-anchor eif-all-keywords)          2 font-lock-keyword-face nil)
@@ -1118,6 +1122,9 @@ don't start with a relevant keyword, the calculation is handed off to
 		     (setq indent (eif-calc-indent-non-keyword))
 		   ;; Class-level.
 		   (setq indent (eif-class-level-kw-indent-m))))
+		;; There's possibly a better way of coding this exception.
+		((looking-at eif-once-non-indent-regexp)
+		 (setq indent (eif-calc-indent-non-keyword)))
 		((looking-at eif-class-level-keywords-regexp)
 		 ;; File level keywords (indent defaults to 0)
 		 (setq indent (eif-class-level-kw-indent-m)))
@@ -1316,7 +1323,8 @@ line on that preceding line."
 			(not (save-excursion
 			       (eif-find-beginning-of-feature)))))
 	       (setq indent (eif-feature-level-indent-m)))
-	      ((looking-at eif-indentation-keywords-regexp)
+	      ((and (looking-at eif-indentation-keywords-regexp)
+		    (not (looking-at eif-once-non-indent-regexp)))
 	       (if (looking-at eif-end-on-current-line)
 		   (setq indent (eif-current-line-indent))
 		 (setq indent
@@ -1360,9 +1368,10 @@ line on that preceding line."
 	       indent)
 	      ;; OK, this is a sanity check, but it kills a minor
 	      ;; instance of `create', so we need to code the corner
-	      ;; case.
+	      ;; case.  As for minor instance of `once'.
 	      ((or (not (looking-at eif-all-keywords-regexp))
-		   (looking-at eif-create-keyword-regexp))
+		   (looking-at eif-create-keyword-regexp)
+		   (looking-at eif-once-non-indent-regexp))
 	       (if originally-looking-at-comment
 		   ;; Then  the line we are trying to indent is a comment
 		   (cond ((eif-continuation-line)
@@ -1477,7 +1486,11 @@ of `eif-check-keyword-indent'."
 	(keyword ""))
     (save-excursion
       ;; Search backward for a matching keyword.
-      (eif-re-search-backward search-regexp 1 t)
+      ;; Note that eif-once-non-indent-regexp indicates we haven't
+      ;; found a match so should keep going.
+      (while (and (eif-re-search-backward search-regexp 1 t)
+		  (looking-at eif-once-non-indent-regexp)
+		  (not (= (point) 1))))
       (if (looking-at search-regexp)
 	  ;; Then - a keyword was found
 	  (progn
