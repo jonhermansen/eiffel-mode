@@ -1585,10 +1585,14 @@ compilation and indentation variables that can be customized."
   "Return non-nil if we are at the beginning of a feature.
 This is defined as at the beginning of the feature name or anywhere in
 whitespace before the start of a feature (including at the end of the
-previous feature, but not in a comment)."
-
-  (save-match-data
-    (looking-at (concat "[ \t\n]*\\b" eif-is-keyword-regexp))))
+previous feature)."
+  (save-excursion
+    (save-match-data
+      (if (eif-in-comment-p)
+	  (end-of-line))
+      (looking-at (concat "\\(" eif-non-source-line "\\|\n\\)*"
+			  "[ \t]*\\b"
+			  eif-is-keyword-regexp)))))
 
 (defun eif-beginning-of-feature (&optional arg)
   "Move backward to next feature beginning.
@@ -1597,62 +1601,70 @@ means move forward to Nth following beginning of feature.
 Returns t unless search stops due to beginning or end of buffer."
   (interactive "p")
 
-  ;; If we're not in the whitespace at the beginning of a feature, or
-  ;; we're going forward, then let's do this from after the "is".
+  ;; If not in the whitespace at the beginning of a feature, or going
+  ;; forward, then do this from after the "is".
   (if (and (or (not (eif-bof-p))
 	       (and arg (< arg 0) (not (eobp))))
 	   (looking-at eif-is-keyword-regexp))
       (re-search-forward eif-is-keyword-regexp))
-  
+
+  ;; BUG: This appears to match eif-is-keyword-regexp in comments and
+  ;; strings!  How come they don't seem to get found?
   (if (re-search-backward eif-is-keyword-regexp nil 'move (or arg 1))
       (progn
 	(backward-sexp 1)
 	(if (looking-at "(")
 	    (backward-word 1))
-	(beginning-of-line))))
+	(beginning-of-line)
+	t)))
 
 ;; Could we use eif-matching line here instead?  That is, we would
-;; search for the initial "do" and then match it.
-(defun eif-end-of-feature-forward-only (&optional arg)
-  "Move forward to end of feature.
-With argument, do it that many times.  Does nothing for negative
-argument!"
+;; search for the initial "do" and then match it.  No, because there
+;; isn't always a "do" and it gets too hard!
+(defun eif-end-of-feature-forward-only (arg)
+  "Move forward to end of feature, ARG times."
 
-  (if (or (null arg)
-	  (= arg 0))
-      (setq arg 1))
+  ;; We try going backwards to the beginning of the current feature on
+  ;; the first iteration.  If we get nowhere, the 1st iteration won't
+  ;; count and we'll go forward instead.
+  (let ((first t))
+    (while (and (> arg 0) (< (point) (point-max)))
 
-  (while (and (> arg 0) (< (point) (point-max)))
-
-    (let ((pos (point)))
-      ;; If not at the beginning of the current feature, then go there.
-      (if (not (eif-bof-p))
-	  (eif-beginning-of-feature))
-      (let ((level 0)
-	    (old-level 0))
-	(while (not (or (eobp) (and (= level 0) (= old-level 1))))
-	  (re-search-forward (concat eif-end-matching-keywords
-				     "\\|" eif-end-keyword)
-			     nil 'move)
-	  (cond ((eif-in-comment-p)
-		 (end-of-line)) ; skip comment
-		((eif-in-quoted-string-p)
-		 (re-search-forward "[^%]\"")) ; skip string
-		(t
-		 ;; After a level changing keyword?
-		 (save-excursion
-		   (backward-word 1)
-		   (setq old-level level)
-		   (cond ((looking-at eif-end-matching-keywords)
-			  (setq level (1+ level)))
-			 ((looking-at eif-end-keyword)
-			  (setq level (1- level))))))))
-	;; Hack: if we went nowhere or backwards then just go to eob.
-	(message "pos=%d, point=%d" pos (point))
-	(if (<= (point) pos)
-	    (goto-char (point-max)))))
-    (end-of-line)
-    (setq arg (1- arg)))
+      (let ((pos (point)))
+	;; If the previous search put us at the beginning of a feature
+	;; (as well as the end), then stay here.
+	(if (not (eif-bof-p))
+	    (if (and first
+		     (save-excursion (eif-beginning-of-feature)))
+		;; First iteration and there's a beginning of feature back
+		;; there somewhere, so go to it and see how we go.
+		(eif-beginning-of-feature)
+	      ;; Subsequent iteration or no feature, go forward instead.
+	      (eif-beginning-of-feature -1)))
+	(setq first nil)
+	;; Find the "end" for this feature.
+	(let ((level 0)
+	      (old-level 0))
+	  (while (not (or (eobp) (and (= level 0) (= old-level 1))))
+	    (re-search-forward (concat eif-end-matching-keywords
+				       "\\|" eif-end-keyword)
+			       nil 'move)
+	    (if (not (or (eif-in-comment-p)
+			 (eif-in-quoted-string-p)))
+		;; After a level changing keyword.
+		(save-excursion
+		  (backward-word 1)
+		  (setq old-level level)
+		  (cond ((looking-at eif-end-matching-keywords)
+			 (setq level (1+ level)))
+			((looking-at eif-end-keyword)
+			 (setq level (1- level))))))))
+	;; If the end of the feature we're at involved moving forward,
+	;; then we're rocking, so this iteration counts.
+	(if (> (point) pos)
+	    (progn
+	      (end-of-line)
+	      (setq arg (1- arg)))))))
 
   ;; Go to beginning of next line.
   (forward-line))
@@ -1662,12 +1674,16 @@ argument!"
 With argument, do it that many times.  Negative argument -N means move
 back to Nth preceding end of defun."
   (interactive "p")
+
+  ;; Default is to find the 1st feature end.
+  (if (or (null arg)
+	  (= arg 0))
+      (setq arg 1))
+
   (if (>= arg 0)
       (eif-end-of-feature-forward-only arg)
-    (eif-beginning-of-feature (1+ (- arg)))
-    (setq arg 1)
-    (if (not (bobp))
-	(eif-end-of-feature-forward-only))))
+    (if (eif-beginning-of-feature (1+ (- arg)))
+	(eif-end-of-feature-forward-only 1))))
 
 (defun eif-narrow-to-feature ()
   "Make text outside current feature invisible.
