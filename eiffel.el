@@ -422,7 +422,7 @@ in Debian GNU/Linux, when the default value is \"se-compile\"."
 (defconst eif-class-level-keywords-regexp
   (eif-post-anchor
    (concat
-    "class\\|feature" "\\|"
+    "class\\|feature\\|convert" "\\|"
     "deferred[ \t]+class\\|expanded[ \t]+class" "\\|"
     "reference[ \t]+class\\|separate[ \t]+class" "\\|"
     "inherit\\|creation"))
@@ -583,7 +583,7 @@ If one of these occurs prior to an `eif-obsolete-keyword' then the
   "Regexp matching `indexing' keyword, with trailing context.")
 
 (defconst eif-indentation-keywords
-  (concat "indexing\\|rescue\\|inherit\\|creation" "\\|"
+  (concat "indexing\\|convert\\|rescue\\|inherit\\|creation" "\\|"
 	  "invariant\\|require\\|local\\|ensure\\|obsolete" "\\|"
 	  eif-from-level-keywords "\\|"
 	  eif-if-or-inspect-level-keywords "\\|"
