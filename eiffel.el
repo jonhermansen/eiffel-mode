@@ -1459,6 +1459,7 @@ does matching of parens ala \\[backward-sexp]'."
 	    (list "Comments"
 		  ["Feature Quote" eif-feature-quote  (eif-in-comment-p)]
 		  ["Fill         " eif-fill-paragraph (eif-in-comment-p)]))))
+  (easy-menu-add eiffel-mode-menu)
 
   (setq local-abbrev-table eiffel-mode-abbrev-table)
   (setq auto-fill-function 'eif-auto-fill)
