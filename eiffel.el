@@ -3,7 +3,8 @@
 ;; Copyright (C) 1989, 1990, 1993, 1994, 1995, 1996, 1999, 2000, 2001
 ;;                         Tower Technology Corporation,
 ;;                         Free Software Foundation,
-;;                         Martin Schwenke
+;;                         Martin Schwenke,
+;;                         D. Colnet, C. Adrian
 
 ;; Authors: 1989-1990 Stephen Omohundro, ISE and Bob Weiner
 ;;          1993-1996 Tower Technology Corporation
@@ -250,36 +251,11 @@ line.  Can be negative."
   :group 'eiffel-indent)
 
 ;;
-;; Font-lock support.
-;;
-(defconst eiffel-font-lock-keywords
-  '(;; major keywords
-    ("\\(\\(^[ \t]*\\|[ \t]+\\)creation\\|^deferred[ \t]+class\\|^expanded[ \t]+class\\|^class\\|^feature\\|^indexing\\|\\(^[ \t]*\\|[ \t]+\\)inherit\\|^obsolete\\)[ \t\n]" 0 font-lock-keyword-face nil)
-    ;; assertions
-    ("\\(^\\|[^_\n]\\<\\)\\(check\\|ensure then\\|ensure\\|invariant\\|require else\\|require\\|variant\\)\\($\\|\\>[^_\n]\\)" 2 font-lock-reference-face nil)
-    ;; minor keywords
-    ("\\(^\\|[^_\n]\\<\\)\\(alias\\|all\\|and not\\|and then\\|and\\|as\\|create\\|debug\\|deferred\\|do\\|else\\|elseif\\|end\\|export\\|external\\|from\\|frozen\\|if not\\|if\\|implies not\\|implies\\|infix\\|inspect\\|is deferred\\|is unique\\|is\\|like\\|local\\|loop\\|not\\|obsolete\\|old\\|once\\|or else\\|or not\\|or\\|precursor\\|prefix\\|redefine\\|rename\\|rescue\\|retry\\|select\\|strip\\|then\\|undefine\\|unique\\|until\\|when\\|xor\\)\\($\\|\\>[^_\n]\\)" 2 font-lock-function-name-face nil)
-    ;; hidden comments
-    ("--|.*" 0 font-lock-keyword-face t)
-    ;; quoted expr's in comments
-    ("`[^`'\n]*'" 0 font-lock-string-face t))
-  "Regular expressions to use with font-lock mode.")
-
-(defconst eiffel-font-lock-defaults
-  '((eiffel-font-lock-keywords)
-    nil nil nil nil))
-
-(and (boundp 'font-lock-defaults-alist)
-     (add-to-list 'font-lock-defaults-alist
-		  (cons 'eiffel-mode
-			eiffel-font-lock-defaults)))
-
-;;
-;; Compilation support for GNU Eiffel.
+;; Compilation support for GNU SmallEiffel.
 ;; 
 
 (defcustom eif-use-gnu-eiffel t
-  "*If t include support for compilation using GNU Eiffel."
+  "*If t include support for compilation using GNU SmallEiffel."
   :type 'boolean
   :group 'eiffel-compile)
 
@@ -302,6 +278,31 @@ GNU/Linux, when the default value is \"se-compile\"."
   "*Options to use for compiling Eiffel programs."
   :type 'string
   :group 'eiffel-compile)
+
+;;
+;; Font-lock support.
+;;
+(defconst eiffel-font-lock-keywords
+  '(;; major keywords
+    ("\\(\\(^[ \t]*\\|[ \t]+\\)creation\\|^deferred[ \t]+class\\|^expanded[ \t]+class\\|^class\\|^feature\\|^indexing\\|\\(^[ \t]*\\|[ \t]+\\)inherit\\|^obsolete\\)[ \t\n]" 0 font-lock-keyword-face nil)
+    ;; assertions
+    ("\\(^\\|[^_\n]\\<\\)\\(check\\|ensure then\\|ensure\\|invariant\\|require else\\|require\\|variant\\)\\($\\|\\>[^_\n]\\)" 2 font-lock-reference-face nil)
+    ;; minor keywords
+    ("\\(^\\|[^_\n]\\<\\)\\(agent\\|alias\\|all\\|and not\\|and then\\|and\\|as\\|create\\|debug\\|deferred\\|do\\|else\\|elseif\\|end\\|export\\|external\\|from\\|frozen\\|if not\\|if\\|implies not\\|implies\\|infix\\|inspect\\|is deferred\\|is unique\\|is\\|like\\|local\\|loop\\|not\\|obsolete\\|old\\|once\\|or else\\|or not\\|or\\|precursor\\|prefix\\|redefine\\|rename\\|rescue\\|retry\\|select\\|separate\\|strip\\|then\\|undefine\\|unique\\|until\\|when\\|xor\\)\\($\\|\\>[^_\n]\\)" 2 font-lock-function-name-face nil)
+    ;; hidden comments
+    ("--|.*" 0 font-lock-keyword-face t)
+    ;; quoted expr's in comments
+    ("`[^`'\n]*'" 0 font-lock-string-face t))
+  "Regular expressions to use with font-lock mode.")
+
+(defconst eiffel-font-lock-defaults
+  '((eiffel-font-lock-keywords)
+    nil nil nil nil))
+
+(and (boundp 'font-lock-defaults-alist)
+     (add-to-list 'font-lock-defaults-alist
+		  (cons 'eiffel-mode
+			eiffel-font-lock-defaults)))
 
 ;;
 ;; No user-customizable definitions below this point.
@@ -430,7 +431,7 @@ at the end of STRING, we don't include a null substring for that."
 (defun eif-short ()
   "Display the short form of an Eiffel class."
   (interactive)
-  (let* ((class	(read-string
+  (let* ((class (read-string
 		 "Class or file: "
 		 (if (buffer-file-name)
 		     (file-name-nondirectory (buffer-file-name)))))
@@ -511,7 +512,7 @@ at the end of STRING, we don't include a null substring for that."
 \\|redefine\\|undefine\\|select\\|export\\|require\\|local\\|deferred\
 \\|do\\|once\\|ensure\\|alias\\|external\\|check\\|rescue\\|debug\\|if\
 \\|inspect\\|from\\|else\\|elseif\\|when\\|until\\|variant\\|loop\\|then\
-\\|obsolete\\|end\\)[^a-z0-9_]"
+\\|obsolete\\|end\\|separate\\)[^a-z0-9_]"
   "Regular Expression to identify the presence of any eiffel keyword in a line.
 Does not include `is'.")
 
@@ -520,7 +521,7 @@ Does not include `is'.")
 ;; Note obsolete is handled as a special case since it is both a
 ;; class-level and a feature-level keyword
 (defconst eif-class-level-keywords
-  "\\(indexing\\|class\\|deferred[ \t]*class\\|expanded[ \t]*class\\|inherit\\|creation\\|feature\\)[^a-z0-9_]"
+  "\\(indexing\\|class\\|deferred[ \t]+class\\|expanded[ \t]+class\\|separate[ \t]+class\\|inherit\\|creation\\|feature\\)[^a-z0-9_]"
   "Keywords introducing class-level clauses.
 Note that `invariant' and `obsolete' are not included here since can
 function as more than one type of keyword.")
@@ -530,7 +531,7 @@ function as more than one type of keyword.")
   "Those keywords which introduce subclauses of the inherit clause.")
 
 (defconst eif-feature-level-keywords
-  "\\(require\\|local\\|deferred\\|do\\|once\\|ensure\\|alias\\|external\\)[^a-z0-9_]"
+  "\\(require\\|local\\|deferred\\|separate\\|do\\|once\\|ensure\\|alias\\|external\\)[^a-z0-9_]"
   "Those keywords which are internal to features (in particular, routines).")
 
 (defconst eif-end-keyword "end" "The `end' keyword.")
@@ -545,7 +546,7 @@ function as more than one type of keyword.")
   "The `end' keyword with context.")
 
 (defconst eif-end-matching-keywords
-  "\\(check\\|class\\|feature\\|rename\\|redefine\\|undefine\\|select\\|export\\|do\\|once\\|deferred\\|external\\|alias\\|if\\|inspect\\|from\\|debug\\)[^a-z0-9_]"
+  "\\(check\\|class\\|debug\\|feature\\|rename\\|redefine\\|undefine\\|select\\|export\\|do\\|once\\|deferred\\|separate\\|external\\|alias\\|if\\|inspect\\|from\\|debug\\)[^a-z0-9_]"
   "Those keywords whose clause is terminated by an `end' keyword.")
 
 (defconst eif-control-flow-keywords
@@ -633,39 +634,39 @@ part of this list but it is handled separately in the functions
 If one of these occurs prior to an `eif-obsolete-keyword' then the
 `eif-obsolete-keyword' is indented.")
 
-(defconst eif-white-space-regexp       "[ 	]*"
+(defconst eif-white-space-regexp       "[ \t]*"
   "RE to locate whitespace.")
 
-(defconst eif-comment-line-regexp      "[ 	]*\\(--.*\\)$"
+(defconst eif-comment-line-regexp      "[ \t]*\\(--.*\\)$"
   "RE to match a line with a comment on it.")
 
-(defconst eif-non-source-line          "[ 	]*\\(--.*\\)?$"
+(defconst eif-non-source-line          "[ \t]*\\(--.*\\)?$"
   "RE to match a line with a only a comment or whitespace.")
 
 (defconst eif-variable-or-const-regexp "[^()\n]*:[^=].*"
   "RE to match a variable or constant declaration.")
 
 (defconst eif-indentation-keywords-regexp
-  "\\(indexing\\|class\\|check\\|rescue\\|inherit\\|creation\\|feature\\|invariant\\|rename\\|redefine\\|undefine\\|select\\|export\\|require\\|local\\|deferred\\|do\\|once\\|ensure\\|alias\\|external\\|if\\|inspect\\|from\\|debug\\|else\\|elseif\\|when\\|until\\|variant\\|invariant\\|loop\\|obsolete\\)[^a-z0-9_]"
+  "\\(indexing\\|class\\|check\\|rescue\\|inherit\\|creation\\|feature\\|invariant\\|rename\\|redefine\\|undefine\\|select\\|export\\|require\\|local\\|deferred\\|separate\\|do\\|once\\|ensure\\|alias\\|external\\|if\\|inspect\\|from\\|debug\\|else\\|elseif\\|when\\|until\\|variant\\|invariant\\|loop\\|obsolete\\)[^a-z0-9_]"
   "RE to identify the presence of any eiffel keyword triggering indentation.")
 
 (defconst eif-feature-indentation-keywords-regexp
   "\\(creation\\|feature\\)[^a-z0-9_]"
   "Keywords which denote the presence of features following them.")
 
-(defconst eif-is-keyword-regexp "\\(.*[ 	)]\\)?is[ 	]*\\(--.*\\)?$"
+(defconst eif-is-keyword-regexp "\\(.*[ \t)]\\)?is[ \t]*\\(--.*\\)?$"
   "The `is' keyword (with some context).")
 
 (defconst eif-multiline-routine-is-keyword-regexp
-  ".*([^)]*)\\([ \t\n]*\\|[ \t\n]*:[][ \t\nA-Za-x0-9_,]*\\)is[ 	]*\\(--.*\\)?$"
+  ".*([^)]*)\\([ \t\n]*\\|[ \t\n]*:[][ \t\nA-Za-x0-9_,]*\\)is[ \t]*\\(--.*\\)?$"
   "The `is' keyword (with some context).")
 
 (defconst eif-operator-regexp
-  "[ 	]*\\([@*/+]\\|-[^-]\\|\\<and[ 	(]\\|\\<or[ 	(]\\)"
+  "[ \t]*\\([@*/+]\\|-[^-]\\|\\<\\(and\\|or\\|implies\\)[ \t(]\\)"
   "Eiffel operators - used to identify continuation lines.")
 
 (defconst eif-operator-eol-regexp
-  ".*\\([@*/+-]\\|\\<and\\|\\<or\\|:=\\)[ 	]*$"
+  ".*\\([@*/+-]\\|\\<and\\|\\<or\\|\\<implies\\|:=\\)[ \t]*\\(--.*\\)?$"
   "Eiffel operators - used to identify continuation lines.")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -846,7 +847,7 @@ constructs do not require correct indentation of the preceding line."
 	    (setq continuation nil))
 	  ;; Record whether the line being indented begins with an "<id> :"
 	  ;; This is used in indenting assertion tag expressions.
-	  (if (looking-at "[ 	]*[a-zA-Z0-9_]+[ 	]*:")
+	  (if (looking-at "[ \t]*[a-zA-Z0-9_]+[ \t]*:")
 	      (setq id-colon t)
 	    (setq id-colon nil))
 	  
@@ -1275,7 +1276,7 @@ The region may be specified using optional arguments START and END."
       (goto-char start-point)
       (cond ((eq major-mode 'eiffel-mode)
 	     (while (< (point) end-point)
-	       (if (not (looking-at "[ 	]*$"))
+	       (if (not (looking-at "[ \t]*$"))
 		   (eif-indent-line))
 	       (forward-line 1)
 	       (beginning-of-line)))
@@ -1289,7 +1290,7 @@ The region may be specified using optional arguments START and END."
 ;;  (interactive)
 ;;  (if (not direction)
 ;;      (progn
-;;	(cond ((save-excursion (beginning-of-line) (looking-at "[ 	]*end.*$"))
+;;	(cond ((save-excursion (beginning-of-line) (looking-at "[ \t]*end.*$"))
 ;;	       (goto-char (eif-matching-line nil 'backward)))
 ;;	      ((looking-at "(")
 ;;	       (forward-sexp))
@@ -1457,7 +1458,7 @@ Key definitions:
 \\{eiffel-mode-map}
 
 If variable `eif-use-gnu-eiffel' is non-nil (default t) then support
-for using GNU Small Eiffel is enabled.  Run \\[eif-customize] to see
+for using GNU SmallEiffel is enabled.  Run \\[eif-customize] to see
 compilation and indentation variables that can be customized."
 
   (interactive)
