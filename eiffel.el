@@ -662,7 +662,7 @@ Does not include `is'.  See `eif-all-keywords'.")
   "Regexp matching the beginning of an Eiffel comment.")
 
 (defconst eif-non-source-line
-  (concat "[ \t]*\\(\\(" eiffel-comment-start-skip "\\|"
+  (concat "[ \t]*\\(\\(" "--" "\\|"
 	  eif-preprocessor-keywords-regexp "\\).*\\)?$")
   "RE matching line with only whitespace and comment or preprocessor keyword.")
 
