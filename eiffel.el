@@ -3,6 +3,7 @@
 ;; Copyright (C) 1989, 1990, 1993, 1994, 1995, 1996, 1999, 2000, 2001, 2002
 ;;                         Tower Technology Corporation,
 ;;                         Free Software Foundation,
+;;                         Bob Weiner,
 ;;                         D. Colnet, C. Adrian
 
 ;; Authors: 1989-1990 Stephen Omohundro, ISE and Bob Weiner
@@ -36,6 +37,10 @@
 ;; Boston, MA 02111-1307, USA.
 
 ;;; Commentary:
+
+;;  NEW VERSIONS
+;;    The latest version of this mode is always available via:
+;;      http://meltin.net/hacks/emacs/
 
 ;;  INSTALLATION
 ;;    To install, simply copy this file into a directory in your
@@ -580,7 +585,7 @@ function as more than one type of keyword.")
   "The `end' keyword with context.")
 
 (defconst eif-end-matching-keywords
-  "\\(check\\|class\\|debug\\|feature\\|rename\\|redefine\\|undefine\\|select\\|export\\|do\\|once\\|deferred\\|separate\\|external\\|alias\\|if\\|inspect\\|from\\|debug\\)[^a-z0-9_]"
+  "\\(check\\|class\\|debug\\|feature\\|rename\\|redefine\\|undefine\\|select\\|export\\|do\\|once[ \t\n]*[^\" \t\n]\\|deferred\\|separate\\|external\\|alias\\|if\\|inspect\\|from\\|debug\\)[^a-z0-9_]"
   "Those keywords whose clause is terminated by an `end' keyword.")
 
 (defconst eif-control-flow-keywords
