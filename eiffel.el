@@ -1570,7 +1570,7 @@ compilation and indentation variables that can be customized."
 	comment-start                "-- "
 	comment-end                  ""
 	comment-column               32
-	comment-start-skip           "--+[ \t]*"
+	comment-start-skip           "--+|?[ \t]*"
 	font-lock-defaults           eiffel-font-lock-defaults)
 
   (if eif-set-tab-width-flag
@@ -1632,7 +1632,7 @@ Returns t unless search stops due to beginning or end of buffer."
       (re-search-forward eif-is-keyword-regexp))
 
   (let ((success t))
-    ;; Move arg towards zero as we search, failing if we hit edge of buffer.
+    ;; Change arg towards zero as we search, failing if we hit edge of buffer.
     (while (or (and (> arg 0) (or (not (bobp)) (setq success nil)))
 	       (and (< arg 0) (or (not (eobp)) (setq success nil))))
       (if (re-search-backward eif-is-keyword-regexp nil 'move
@@ -1660,7 +1660,8 @@ Assumes point is at the beginning of the feature."
       (re-search-forward (concat eif-end-matching-keywords
                                  "\\|" eif-end-keyword)
                          nil 'move)
-      (backward-char 1)
+      (backward-char 1)         ; matching eif-end-matching-keywords
+                                ; takes us one char to far
       (if (not (or (eif-in-comment-p)
                    (eif-in-quoted-string-p)))
           ;; After a level changing keyword.
