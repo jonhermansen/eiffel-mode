@@ -250,6 +250,28 @@ line.  Can be negative."
   :type 'integer
   :group 'eiffel-indent)
 
+(defcustom eif-string-continuation-indent 0
+  "*Extra indentation for a continued string.
+Specified as number of `eif-indent-increments'."
+  :type 'integer
+  :group 'eiffel-indent)
+
+(defcustom eif-extra-string-continuation-indent -1
+  "*Number of spaces to add to `eif-string-continuation-indent'.
+This results in the actual indentation of a continued string.  Can be
+negative."
+  :type 'integer
+  :group 'eiffel-indent)
+
+(defcustom eif-indent-string-continuations-relatively-flag t
+  "*If non-nil string continuations are indented relative to first character.
+That is, `eif-string-continuation-indent' and
+`eif-extra-string-continuation-indent' are added to position of first
+character of string.  If nil, string continuations are indented
+relative to indent of previous line."
+  :type 'boolean
+  :group 'eiffel-indent)
+
 ;;
 ;; Compilation support for GNU SmallEiffel.
 ;; 
@@ -451,57 +473,62 @@ at the end of STRING, we don't include a null substring for that."
 (defmacro eif-class-level-kw-indent-m ()
   "Indentation amount for Class level keywords (in number of spaces)."
   '(+ (* eif-class-level-kw-indent eif-indent-increment)
-     eif-extra-class-level-kw-indent))
+      eif-extra-class-level-kw-indent))
 
 (defmacro eif-class-level-comment-indent-m ()
   "Indentation amount for Class level comments (in number of spaces)."
   '(+ (* eif-class-level-comment-indent eif-indent-increment)
-     eif-extra-class-level-comment-indent))
+      eif-extra-class-level-comment-indent))
 
 (defmacro eif-inherit-level-kw-indent-m ()
   "Indentation amount for Inherit level keywords (in number of spaces)."
   '(+ (* eif-inherit-level-kw-indent eif-indent-increment)
-     eif-extra-inherit-level-kw-indent))
+      eif-extra-inherit-level-kw-indent))
 
 (defmacro eif-feature-level-indent-m ()
   "Indentation amount for features (in number of spaces)."
   '(+ (* eif-feature-level-indent eif-indent-increment)
-     eif-extra-feature-level-indent))
+      eif-extra-feature-level-indent))
 
 (defmacro eif-feature-level-kw-indent-m ()
   "Indentation amount for Feature level keywords (in number of spaces)."
   '(+ (* eif-feature-level-kw-indent eif-indent-increment)
-     eif-extra-feature-level-kw-indent))
+      eif-extra-feature-level-kw-indent))
 
 (defmacro eif-body-comment-indent-m ()
   "Indentation amount for comments in routine bodies (in number of spaces)."
   '(+ (* eif-body-comment-indent eif-indent-increment)
-     eif-extra-body-comment-indent))
+      eif-extra-body-comment-indent))
 
 (defmacro eif-feature-level-comment-indent-m ()
   "Indentation amount for Feature level comments (in number of spaces)."
   '(+ (* eif-feature-level-comment-indent eif-indent-increment)
-     eif-extra-feature-level-comment-indent))
+      eif-extra-feature-level-comment-indent))
 
 (defmacro eif-check-keyword-indent-m ()
   "Indentation amount for Check keyword (in number of spaces)."
   '(+ (* eif-check-keyword-indent eif-indent-increment)
-     eif-extra-check-keyword-indent))
+      eif-extra-check-keyword-indent))
 
 (defmacro eif-rescue-keyword-indent-m ()
   "Indentation amount for Rescue keyword (in number of spaces)."
   '(+ (* eif-rescue-keyword-indent eif-indent-increment)
-     eif-extra-rescue-keyword-indent))
+      eif-extra-rescue-keyword-indent))
 
 (defmacro eif-then-indent-m ()
   "Indentation amount for `then' appearing on a line by itself (in number of spaces)."
   '(+ (* eif-then-indent eif-indent-increment)
-     eif-extra-then-indent))
+      eif-extra-then-indent))
 
 (defmacro eif-continuation-indent-m ()
   "Indentation amount for a statement continuation line (in number of spaces)."
   '(+ (* eif-continuation-indent eif-indent-increment)
-     eif-extra-continuation-indent))
+      eif-extra-continuation-indent))
+
+(defmacro eif-string-continuation-indent-m ()
+  "Indentation amount for a statement continuation line (in number of spaces)."
+  '(+ (* eif-string-continuation-indent eif-indent-increment)
+      eif-extra-string-continuation-indent))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;          Keyword Regular Expression Variables.               ;;
@@ -833,7 +860,7 @@ constructs do not require correct indentation of the preceding line."
 	    ;; multi-line parenthesis expression
 	    ;; Move string continuation lines one column to the left
 	    (if (looking-at "%")
-		(setq indent (1- indent)))
+		(setq indent (+ indent (eif-string-continuation-indent-m))))
 	  
 	  ;; Else Find the first preceding line with non-comment source on it
 	  ;; that is not a continuation line of a multi-line parnethesized
@@ -1842,7 +1869,9 @@ point."
       (setq eif-paren-depth 1);; To account for being inside string
       (save-excursion
 	(if (re-search-backward "\"" nil t)
-	    (setq eif-ind-val (1+ (current-column)))
+	    (if eif-indent-string-continuations-relatively-flag
+		(setq eif-ind-val (1+ (current-column)))
+	      (setq eif-ind-val (eif-current-line-indent)))
 	  (goto-char indent-point)
 	  (if (looking-at "^[ \t]*[^ \t\n]")
 	      (eif-move-to-prev-non-blank))
