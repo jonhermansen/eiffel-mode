@@ -740,10 +740,10 @@ This will also match local variable and parameter declarations.")
      ;; Keywords.  The first few can appear in conjunction with other
      ;; keywords, and the anchored regexp doesn't cater for overlaps,
      ;; thus there are several entries here.
-     (,(eif-anchor "class\\|is\\|not")    2 font-lock-keyword-face nil)
-     (,(eif-anchor eif-operator-keywords) 2 font-lock-keyword-face nil)
-     (,(eif-anchor eif-misc-keywords)     2 font-lock-keyword-face nil)
-     (,(eif-anchor eif-all-keywords)      2 font-lock-keyword-face nil)
+     (,(eif-anchor "class\\|is\\|not\\|once") 2 font-lock-keyword-face nil)
+     (,(eif-anchor eif-operator-keywords)     2 font-lock-keyword-face nil)
+     (,(eif-anchor eif-misc-keywords)         2 font-lock-keyword-face nil)
+     (,(eif-anchor eif-all-keywords)          2 font-lock-keyword-face nil)
 
      ;; Quoted expr's in comments.
      ("`[^`'\n]*'" 0 font-lock-string-face t)
