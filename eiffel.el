@@ -255,9 +255,10 @@ line.  Can be negative."
     nil nil nil nil))
 
 (require 'font-lock)
-(add-to-list 'font-lock-defaults-alist
-	     (cons 'eiffel-mode
-		   eiffel-font-lock-defaults))
+(and (boundp 'font-lock-defaults-alist)
+     (add-to-list 'font-lock-defaults-alist
+		  (cons 'eiffel-mode
+			eiffel-font-lock-defaults)))
 
 ;;
 ;; Compilation support for GNU Eiffel.
