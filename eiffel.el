@@ -707,15 +707,8 @@ This will also match local variable and parameter declarations.")
 (defconst eiffel-font-lock-keywords-2
   (append
    eiffel-font-lock-keywords-1
-   `(;; Major keywords.  Can probably be rolled into the Minor
-     ;; keywords, since they all use the keyword face.
-     ;;;;("\\(\\(^[ \t]*\\|[ \t]+\\)creation\\|^deferred[ \t]+class\\|expanded[ \t]+class\\|reference[ \t]+class\\|^class\\|^feature\\|^indexing\\|\\(^[ \t]*\\|[ \t]+\\)inherit\\|^obsolete\\)[ \t\n]" 0 font-lock-keyword-face ni)
-     (;; Lost "expanded class" and "reference class" when not at "^\s-*"???
-      ,(concat "\\(^\\s-*\\(" eif-class-level-keywords
-	       "\\|obsolete\\S_\\)\\|[ \t]+\\(creation\\|inherit\\)\\S_\\)")
-      0 font-lock-keyword-face nil)
-
-     ;; Assertions.
+   `(;; Assertions.
+     ;; FIXME: Cyril thinks these should just be part of the keywords below.
      (,(eif-anchor "check\\|ensure then\\|ensure\\|invariant\\|require else\\|require\\|variant") 2 font-lock-reference-face nil)
 
      ;; Preprocessor keywords.  Note that, by luck more than planning,
@@ -723,12 +716,11 @@ This will also match local variable and parameter declarations.")
      ;; '#' isn't a word boundary (which is added by eif-anchor).
      (,(eif-anchor eif-preprocessor-keywords) 3 font-lock-builtin-face nil)
 
-     ;; Minor keywords: the first 4 can appear in conjunction with
-     ;; other keywords, and the anchored regexp doesn't cater for
-     ;; overlaps.
-     (,(eif-anchor "is")                  2 font-lock-keyword-face nil)
+     ;; Keywords.  The first few can appear in conjunction with other
+     ;; keywords, and the anchored regexp doesn't cater for overlaps,
+     ;; thus there are several entries here.
+     (,(eif-anchor "class\\|is\\|not")    2 font-lock-keyword-face nil)
      (,(eif-anchor eif-operator-keywords) 2 font-lock-keyword-face nil)
-     (,(eif-anchor "not")                 2 font-lock-keyword-face nil)
      (,(eif-anchor eif-misc-keywords)     2 font-lock-keyword-face nil)
      (,(eif-anchor eif-all-keywords)      2 font-lock-keyword-face nil)
 
