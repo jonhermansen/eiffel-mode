@@ -401,7 +401,7 @@ in Debian GNU/Linux, when the default value is \"se-compile\"."
 
 (defun eif-post-anchor (regexp)
   "Anchor given REGEXP with `eif-non-id-char-regexp'."
-  (concat "\\(" regexp "\\)" eif-non-id-char-regexp))
+  (concat "\\<\\(" regexp "\\)\\>" eif-non-id-char-regexp))
 
 (defun eif-anchor (regexp)
   "Anchor given REGEXP front and back to match line break or non-symbol char."
