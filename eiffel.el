@@ -334,7 +334,7 @@ in Debian GNU/Linux, when the default value is \"se-compile\"."
 (defconst eif-attribute-regexp
   (concat "[a-z_][^-:\n]*:\\s-*"
 	  "\\(like\\s-*[a-zA-Z][a-z_0-9]*\\|"
-	  "\\(expanded\\s-*\\)?[A-Z][A-Z_0-9]*"
+	  "\\(\\(expanded\\|reference\\)\\s-*\\)?[A-Z][A-Z_0-9]*"
 	  "\\(\\s-*\\[[^-\n]*\\]\\)?\\)"
 	  "\\s-*\\($\\|[;)].*\\|--.*\\)")
   "Regexp matching an Eiffel attribute, parameter or local variable.")
@@ -366,7 +366,7 @@ This will also match local variable and parameter declarations.")
   (append
    eiffel-font-lock-keywords-1
    `(;; major keywords
-     ("\\(\\(^[ \t]*\\|[ \t]+\\)creation\\|^deferred[ \t]+class\\|expanded[ \t]+class\\|^class\\|^feature\\|^indexing\\|\\(^[ \t]*\\|[ \t]+\\)inherit\\|^obsolete\\)[ \t\n]" 0 font-lock-keyword-face nil)
+     ("\\(\\(^[ \t]*\\|[ \t]+\\)creation\\|^deferred[ \t]+class\\|expanded[ \t]+class\\|reference[ \t]+class\\|^class\\|^feature\\|^indexing\\|\\(^[ \t]*\\|[ \t]+\\)inherit\\|^obsolete\\)[ \t\n]" 0 font-lock-keyword-face nil)
      ;; assertions
      ("\\(^\\|[^_\n]\\<\\)\\(check\\|ensure then\\|ensure\\|invariant\\|require else\\|require\\|variant\\)\\($\\|\\>[^_\n]\\)" 2 font-lock-reference-face nil)
      ;; minor keywords
@@ -707,7 +707,7 @@ Does not include `is'.")
 ;; Note obsolete is handled as a special case since it is both a
 ;; class-level and a feature-level keyword
 (defconst eif-class-level-keywords
-  "\\(indexing\\|class\\|deferred[ \t]+class\\|expanded[ \t]+class\\|separate[ \t]+class\\|inherit\\|creation\\|feature\\)[^a-z0-9_]"
+  "\\(indexing\\|class\\|deferred[ \t]+class\\|expanded[ \t]+class\\|reference[ \t]+class\\|separate[ \t]+class\\|inherit\\|creation\\|feature\\)[^a-z0-9_]"
   "Keywords introducing class-level clauses.
 Note that `invariant' and `obsolete' are not included here since can
 function as more than one type of keyword.")
