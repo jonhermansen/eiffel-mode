@@ -905,7 +905,7 @@ at the end of STRING, we do not include a null substring for that."
 		      (or eif-debug-target
 			  (concat eif-compile-target "_debug")))))
     
-  (let* ((eif-compile-options (concat "-trace " eif-compile-options))
+  (let* ((eif-compile-options (concat "-sedb " eif-compile-options))
 	 (eif-compile-target eif-debug-target)
 	 (buff (eif-compile-internal))
 	 (proc (get-buffer-process buff)))
