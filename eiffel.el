@@ -7,7 +7,7 @@
 
 ;; Authors: 1989-1990 Stephen Omohundro, ISE and Bob Weiner
 ;;          1993-1996 Tower Technology Corporation
-;;          1999      Martin Schwenke <martin@meltin.net>
+;;          1999-2000 Martin Schwenke <martin@meltin.net>
 ;; Version: $Id$
 ;; Keywords: eiffel languages oop
 
