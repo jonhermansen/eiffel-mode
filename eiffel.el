@@ -400,7 +400,11 @@ in Debian GNU/Linux, when the default value is \"se-compile\"."
   "The characters that are not part of identifiers.")
 
 (defun eif-post-anchor (regexp)
-  "Anchor given REGEXP with `eif-non-id-char-regexp'."
+  "Anchor given REGEXP with end-word delimiter and `eif-non-id-char-regexp'."
+  (concat "\\(" regexp "\\)\\>" eif-non-id-char-regexp))
+
+(defun eif-word-anchor (regexp)
+  "Anchor given REGEXP with word delimiters and `eif-non-id-char-regexp'."
   (concat "\\<\\(" regexp "\\)\\>" eif-non-id-char-regexp))
 
 (defun eif-anchor (regexp)
@@ -418,7 +422,7 @@ Note that `invariant' and `obsolete' are not included here since can
 function as more than one type of keyword.")
 
 (defconst eif-class-level-keywords-regexp
-  (eif-post-anchor eif-class-level-keywords)
+  (eif-word-anchor eif-class-level-keywords)
   "Regexp of keywords introducing class level clauses, with some context.
 See `eif-class-level-keywords'.")
 
@@ -431,7 +435,7 @@ See `eif-class-level-keywords'.")
   "Those keywords which are internal to features (in particular, routines).")
 
 (defconst eif-feature-level-keywords-regexp
-  (eif-post-anchor eif-feature-level-keywords)
+  (eif-word-anchor eif-feature-level-keywords)
   "Regexp of keywords internal to features (usually routines).
 See `eif-feature-level-keywords'.")
 
@@ -453,7 +457,7 @@ is part of this list but it is handled separately in the function
 \[eif-matching-kw\].")
 
 (defconst eif-control-flow-matching-keywords-regexp
-  (eif-post-anchor eif-control-flow-matching-keywords)
+  (eif-word-anchor eif-control-flow-matching-keywords)
   "Regexp of keywords maybe causing indentation of `eif-control-flow-keyword'.
 See `eif-control-flow-keywords'.")
 
@@ -461,7 +465,7 @@ See `eif-control-flow-keywords'.")
   "The `check' keyword.")
 
 (defconst eif-check-keywords-regexp
-  (eif-post-anchor eif-check-keyword)
+  (eif-word-anchor eif-check-keyword)
   "The `check' keyword (with trailing context).")
 
 ;; FIXME: Doesn't work if once keyword is followed by a string on next
@@ -485,7 +489,7 @@ of this list but it is handled separately in the function
   "Those keywords whose clause is terminated by an `end' keyword.")
 
 (defconst eif-end-matching-keywords-regexp
-  (eif-post-anchor eif-end-matching-keywords)
+  (eif-word-anchor eif-end-matching-keywords)
   "Regexp of keywords whose clause is terminated by an `end' keyword.
 See `eif-end-matching-keywords'.")
 
@@ -494,11 +498,11 @@ See `eif-end-matching-keywords'.")
 (defconst eif-obsolete-keyword "obsolete"  "The `obsolete' keyword.")
 
 (defconst eif-rescue-keywords-regexp
-  (eif-post-anchor eif-rescue-keyword)
+  (eif-word-anchor eif-rescue-keyword)
   "The `rescue' keyword (with trailing context).")
 
 (defconst eif-rescue-matching-keywords-regexp
-  (eif-post-anchor "deferred\\|do\\|once")
+  (eif-word-anchor "deferred\\|do\\|once")
   "Keywords that may cause the indentation of an `eif-rescue-keyword'.
 If these occur prior to an `eif-rescue-keyword' then the
 `eif-rescue-keyword' is indented.  Note that technically, `end' is
@@ -510,7 +514,7 @@ part of this list but it is handled separately in the function
   "Keywords occuring inside of a from clause.")
 
 (defconst eif-from-level-keywords-regexp
-  (eif-post-anchor eif-from-level-keywords)
+  (eif-word-anchor eif-from-level-keywords)
   "Regexp of keywords occuring inside of a from clause.
 See `eif-from-level-keywords'.")
 
@@ -521,12 +525,12 @@ See `eif-from-level-keywords'.")
   "Keywords occuring inside of an if or inspect clause.")
 
 (defconst eif-if-or-inspect-level-keywords-regexp
-  (eif-post-anchor eif-if-or-inspect-level-keywords)
+  (eif-word-anchor eif-if-or-inspect-level-keywords)
   "Regexp of keywords occuring inside of an if or inspect clause.
 See eif-if-or-inspect-level-keywords.")
 
 (defconst eif-if-or-inspect-keyword-regexp
-  (eif-post-anchor "if\\|inspect")
+  (eif-word-anchor "if\\|inspect")
   "Regexp matching the `if' or `inspect' keywords.")
 
 (defconst eif-then-keyword ".*[ \t)]then[ \t]*$"
@@ -567,12 +571,12 @@ If one of these occurs prior to an `eif-obsolete-keyword' then the
   "Keywords that match any eiffel keyword triggering indentation.")
 
 (defconst eif-indentation-keywords-regexp
-  (eif-post-anchor eif-indentation-keywords)
+  (eif-word-anchor eif-indentation-keywords)
   "Regexp of keywords that match any eiffel keyword triggering indentation.
 See `eif-indentation-keywords'.")
 
 (defconst eif-feature-indentation-keywords-regexp
-  (eif-post-anchor "creation\\|feature")
+  (eif-word-anchor "creation\\|feature")
   "Keywords which denote the presence of features following them.")
 
 (defconst eif-is-keyword-regexp "\\(.*[ \t)]\\)?is[ \t]*\\(--.*\\)?$"
@@ -632,18 +636,25 @@ See `eif-preprocessor-keywords'.")
 
 (defconst eif-all-keywords
   (concat eif-indentation-keywords    "\\|"
-	  eif-preprocessor-keywords   "\\|"
 	  "then\\|end")
   "Regexp matching (nearly) any eiffel keyword in a line.
 Does not include `is'.")
 
 (defconst eif-all-keywords-regexp
-  (eif-post-anchor eif-all-keywords)
+  (concat "\\("
+	  (eif-word-anchor eif-all-keywords) "\\|"
+	  eif-preprocessor-keywords-regexp   "\\)")
   "Anchored regexp matching (nearly) any eiffel keyword in a line.
 Does not include `is'.  See `eif-all-keywords'.")
 
-(defconst eif-non-source-line          "[ \t]*\\(--.*\\)?$"
-  "RE to match a line with a only a comment or whitespace.")
+(defconst eiffel-comment-start-skip
+  "--+|?[ \t]*"
+  "Regexp matching the beginning of an Eiffel comment.")
+
+(defconst eif-non-source-line
+  (concat "[ \t]*\\(\\(" eiffel-comment-start-skip "\\|"
+	  eif-preprocessor-keywords-regexp "\\).*\\)?$")
+  "RE matching line with only whitespace and comment or preprocessor keyword.")
 
 (defconst eif-variable-or-const-regexp "[^()\n]*:[^=].*"
   "RE to match a variable or constant declaration.")
@@ -714,7 +725,7 @@ This will also match local variable and parameter declarations.")
      ;; Preprocessor keywords.  Note that, by luck more than planning,
      ;; these aren't font-locked when they're not indented, since the
      ;; '#' isn't a word boundary (which is added by eif-anchor).
-     (,(eif-anchor eif-preprocessor-keywords) 3 font-lock-builtin-face nil)
+     (,(eif-post-anchor eif-preprocessor-keywords) 2 font-lock-builtin-face nil)
 
      ;; Keywords.  The first few can appear in conjunction with other
      ;; keywords, and the anchored regexp doesn't cater for overlaps,
@@ -1256,8 +1267,7 @@ constructs do not require correct indentation of the preceding line."
 
 	  (forward-line -1)
 	  (beginning-of-line)
-	  (while (and (or (looking-at eif-non-source-line)
-			  (looking-at eif-preprocessor-keywords-regexp))
+	  (while (and (looking-at eif-non-source-line)
 		      (not (= (point) 1)))
 	    (forward-line -1)
 	    (beginning-of-line))
@@ -1892,7 +1902,7 @@ compilation and indentation variables that can be customized."
 	comment-start                "-- "
 	comment-end                  ""
 	comment-column               32
-	comment-start-skip           "--+|?[ \t]*"
+	comment-start-skip           eiffel-comment-start-skip
 	font-lock-defaults           eiffel-font-lock-defaults)
 
   (if eif-set-tab-width-flag
