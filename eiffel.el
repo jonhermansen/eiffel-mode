@@ -1785,6 +1785,15 @@ arguments see \\[re-search-forward]."
 	  (goto-char start))
       nil)))
 
+(defun eif-peeking-backwards-at-char (regexp)
+  "Return non-nil is previous character exists and is matched by REGEXP.
+The match is actually an unbounded match starting at the previous character."
+  (save-excursion
+    (save-match-data
+      (and (not (bobp))
+	   (or (backward-char) t)
+	   (looking-at regexp)))))
+
 (defconst eif-prefeature-regexp
   (concat "\\(" eif-non-source-line "\\|\n\\)*" "[ \t]*")
   "Regexp matching whitespace-equivalent content that.")
@@ -1802,18 +1811,25 @@ quoted string."
 	     (eif-re-search-forward (concat eif-end-matching-keywords
 					    "\\|" eif-end-keyword)
 				    nil 'move)
+	     (if (eobp)
+		 (error "Unmatched keyword or internal parsing error"))
+
 	     (backward-char 1)         ; matching eif-end-matching-keywords
 					; takes us one char to far
 	     ;; After a level changing keyword.
 	     (save-excursion
 	       (backward-word 1)
-	       (setq previous-level current-level)
-	       (cond ((looking-at eif-end-matching-keywords)
-		      (setq current-level (1+ current-level)))
-		     ((looking-at eif-end-keyword)
-		      (setq current-level (1- current-level))))))))
-	((looking-at (concat eif-prefeature-regexp
-			     eif-probably-feature-regexp))
+	       (if (and (not (eif-peeking-backwards-at-char
+			      "\\(\\sw\\|\\s_\\)"))
+			(eif-not-in-comment-or-quoted-string-p))
+		   (progn
+		     (setq previous-level current-level)
+		     (cond ((looking-at eif-end-matching-keywords)
+			    (setq current-level (1+ current-level)))
+			   ((looking-at eif-end-keyword)
+			    (setq current-level (1- current-level))))))))))
+	   ((looking-at (concat eif-prefeature-regexp
+				eif-probably-feature-regexp))
 	 ;; Not a routine, find end of attribute or constant.
 	 (goto-char (match-end 0)))))
 
