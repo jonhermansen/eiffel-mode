@@ -277,6 +277,18 @@ relative to indent of previous line."
   :type 'boolean
   :group 'eiffel-indent)
 
+(defcustom eif-fill-max-save 4096
+  "*Maximum size of a paragraph to save before filling.
+Normally \\[eif-fill-paragraph] will mark a buffer as modified even if
+the fill operation does not make any changes.  If the paragraph being
+filled is smaller than the value of this variable then the contents of
+the paragraph will be saved for comparison with the paragraph after
+the fill operation.  If they are the same, the buffer modification
+state is restored.  Set this to 0 to disable this feature, or a very
+big number to enable it for all paragraphs."
+  :type 'integer
+  :group 'eiffel-indent)
+
 ;;
 ;; Compilation support for GNU SmallEiffel.
 ;;
@@ -1842,10 +1854,13 @@ Comments that are not the only thing on a line return nil as their prefix."
 	      (setq para-end (point)))
 	    ;; Avert eyes now - gross hack follows...  how big can an
 	    ;; Eiffel comment be anyway?  :-)
-	    (let ((orig-region (buffer-substring para-begin para-end))
+	    (let ((orig-region (and (<= (- para-end para-begin)
+					eif-fill-max-save)
+				    (buffer-substring para-begin para-end)))
 		  (orig-state  (buffer-modified-p))
 		  (ret  (fill-region para-begin para-end)))
-	      (and (<= para-end (point-max))
+	      (and orig-region
+		   (<= para-end (point-max))
 		   (string-equal
 		    orig-region (buffer-substring para-begin para-end))
 		   (set-buffer-modified-p orig-state))
