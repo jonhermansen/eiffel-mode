@@ -264,7 +264,7 @@ negative."
   :group 'eiffel-indent)
 
 (defcustom eif-indent-string-continuations-relatively-flag t
-  "*If non-nil string continuations are indented relative to first character.
+  "*Non-nil means string continuations are indented relative to 1st character.
 That is, `eif-string-continuation-indent' and
 `eif-extra-string-continuation-indent' are added to position of first
 character of string.  If nil, string continuations are indented
@@ -273,7 +273,7 @@ relative to indent of previous line."
   :group 'eiffel-indent)
 
 (defcustom eif-set-tab-width-flag t
-  "*If non-nil `tab-width' is set to `eif-indent-increment' in eiffel-mode."
+  "*Non-nil means `tab-width' is set to `eif-indent-increment' in `eiffel-mode'."
   :type 'boolean
   :group 'eiffel-indent)
 
@@ -290,9 +290,9 @@ relative to indent of previous line."
   (if (file-executable-p "/usr/bin/se-compile")
       "se-compile"
     "compile")
-  "*Program to use for compiling Eiffel programs.  The default is
-\"compile\", unless \"/usr/bin/se-compile\" exists, as in Debian
-GNU/Linux, when the default value is \"se-compile\"."
+  "*Program to use for compiling Eiffel programs.
+The default is \"compile\", unless \"/usr/bin/se-compile\" exists, as
+in Debian GNU/Linux, when the default value is \"se-compile\"."
   :type 'string
   :group 'eiffel-compile)
 
@@ -1086,12 +1086,12 @@ minus the value of `eif-check-keyword-indent'."
 
 (defun eif-matching-kw (matching-keyword-regexp)
   "Search backwards for a keyword in MATCHING-KEYWORD-REGEXP.
-Return the keyword found.  Also set the value of `eif-matching-indent'
-to the indentation of the keyword found.  If an `end' keyword occurs
-prior to finding one of the keywords in MATCHING-KEYWORD-REGEXP and it
-terminates a check clause, set the value of `eif-matching-indent' to
-the indentation of the `end' minus the value of
-`eif-check-keyword-indent'."
+Return the keyword found.  Also set the value of variable
+`eif-matching-indent' to the indentation of the keyword found.  If an
+`end' keyword occurs prior to finding one of the keywords in
+MATCHING-KEYWORD-REGEXP and it terminates a check clause, set the
+value of variable `eif-matching-indent' to the indentation of the
+`end' minus the value of `eif-check-keyword-indent'."
   (let ((search-regexp (concat "[^a-z0-9A-Z_.]"
 			       eif-end-keyword
 			       "[^a-z0-9A-Z_.]\\|[^a-z0-9A-Z_.]"
@@ -1569,12 +1569,20 @@ compilation and indentation variables that can be customized."
 
 (defun eif-in-comment-p ()
   "Return t if point is in a comment."
-  (or (looking-at "--")
-      (save-excursion
-	(and (/= (point) (point-max))
-	     (/= (point) (save-excursion (end-of-line) (point)))
-	     (forward-char 1))
-	(search-backward "--" (save-excursion (beginning-of-line) (point)) t))))
+  (let ((pos (point))
+	(eol (save-excursion (end-of-line) (point))))
+    (save-excursion
+      (beginning-of-line)
+      (let ((bol (point)))
+	;; Skip things that look like comments but are in a string.
+	(while (and (re-search-forward comment-start-skip eol t)
+		    ;; Avoid corner case: -- "blah"
+		    (progn (backward-char 1) t)
+		    (eif-in-quoted-string-p)))
+	;; Now go back and find that comment, if there was one.
+	(and (re-search-backward comment-start-skip bol t)
+	     (>= pos (point))
+	     (not (eif-in-quoted-string-p)))))))
 
 ;; ENHANCEME: Currently eif-beginning-of-feature only works for
 ;;            routines (`is' is crucial).  It should be made more
@@ -1582,7 +1590,7 @@ compilation and indentation variables that can be customized."
 ;;
 
 (defun eif-bof-p ()
-  "Return non-nil if we are at the beginning of a feature.
+  "Return non-nil if point is at the beginning of a feature.
 This is defined as at the beginning of the feature name or anywhere in
 whitespace before the start of a feature (including at the end of the
 previous feature)."
@@ -1601,6 +1609,9 @@ means move forward to Nth following beginning of feature.
 Returns t unless search stops due to beginning or end of buffer."
   (interactive "p")
 
+  (or arg
+      (setq arg 1))
+
   ;; If not in the whitespace at the beginning of a feature, or going
   ;; forward, then do this from after the "is".
   (if (and (or (not (eif-bof-p))
@@ -1608,15 +1619,46 @@ Returns t unless search stops due to beginning or end of buffer."
 	   (looking-at eif-is-keyword-regexp))
       (re-search-forward eif-is-keyword-regexp))
 
-  ;; BUG: This appears to match eif-is-keyword-regexp in comments and
-  ;; strings!  How come they don't seem to get found?
-  (if (re-search-backward eif-is-keyword-regexp nil 'move (or arg 1))
-      (progn
-	(backward-sexp 1)
-	(if (looking-at "(")
-	    (backward-word 1))
-	(beginning-of-line)
-	t)))
+  (let ((success t))
+    ;; Move arg towards zero as we search, failing if we hit edge of buffer.
+    (while (or (and (> arg 0) (or (not (bobp)) (setq success nil)))
+	       (and (< arg 0) (or (not (eobp)) (setq success nil))))
+      (if (re-search-backward eif-is-keyword-regexp nil 'move
+			      (if (> arg 0) 1 -1))
+	  ;; If we found one, count it and keep moving.
+	  (if (not (or (eif-in-quoted-string-p) (eif-in-comment-p)))
+	      (progn
+		(if (> arg 0)
+		    (setq arg (1- arg))
+		  (setq arg (1+ arg)))))))
+    (if success
+	(progn
+	  (backward-sexp 1)
+	  (if (looking-at "(")
+	      (backward-word 1))
+	  (beginning-of-line)))
+    success))
+
+(defun eif-find-end-of-feature ()
+  "Find the `end' of the current feature definition.
+Assumes point is at the beginning of the feature."
+  (let ((current-level 0)
+        (previous-level 0))
+    (while (not (or (eobp) (and (= current-level 0) (= previous-level 1))))
+      (re-search-forward (concat eif-end-matching-keywords
+                                 "\\|" eif-end-keyword)
+                         nil 'move)
+      (backward-char 1)
+      (if (not (or (eif-in-comment-p)
+                   (eif-in-quoted-string-p)))
+          ;; After a level changing keyword.
+          (save-excursion
+            (backward-word 1)
+            (setq previous-level current-level)
+            (cond ((looking-at eif-end-matching-keywords)
+                   (setq current-level (1+ current-level)))
+                  ((looking-at eif-end-keyword)
+                   (setq current-level (1- current-level)))))))))
 
 ;; Could we use eif-matching line here instead?  That is, we would
 ;; search for the initial "do" and then match it.  No, because there
@@ -1625,57 +1667,45 @@ Returns t unless search stops due to beginning or end of buffer."
   "Move forward to end of feature, ARG times."
 
   ;; We try going backwards to the beginning of the current feature on
-  ;; the first iteration.  If we get nowhere, the 1st iteration won't
-  ;; count and we'll go forward instead.
-  (let ((first t))
-    (while (and (> arg 0) (< (point) (point-max)))
+  ;; the first iteration.  If we get nowhere, the first iteration will
+  ;; not count and we will go forward instead.
+  (let ((on-first-iteration t))
+    (while (and (> arg 0) (not (eobp)))
 
       (let ((pos (point)))
 	;; If the previous search put us at the beginning of a feature
 	;; (as well as the end), then stay here.
 	(if (not (eif-bof-p))
-	    (if (and first
+	    (if (and on-first-iteration
 		     (save-excursion (eif-beginning-of-feature)))
-		;; First iteration and there's a beginning of feature back
-		;; there somewhere, so go to it and see how we go.
+		;; First iteration and there is a beginning of feature
+		;; back there somewhere, so go to it and see how we
+		;; go.
 		(eif-beginning-of-feature)
-	      ;; Subsequent iteration or no feature, go forward instead.
+	      ;; Subsequent iteration or no feature, go forward
+	      ;; instead.
 	      (eif-beginning-of-feature -1)))
-	(setq first nil)
-	;; Find the "end" for this feature.
-	(let ((level 0)
-	      (old-level 0))
-	  (while (not (or (eobp) (and (= level 0) (= old-level 1))))
-	    (re-search-forward (concat eif-end-matching-keywords
-				       "\\|" eif-end-keyword)
-			       nil 'move)
-	    (if (not (or (eif-in-comment-p)
-			 (eif-in-quoted-string-p)))
-		;; After a level changing keyword.
-		(save-excursion
-		  (backward-word 1)
-		  (setq old-level level)
-		  (cond ((looking-at eif-end-matching-keywords)
-			 (setq level (1+ level)))
-			((looking-at eif-end-keyword)
-			 (setq level (1- level))))))))
-	;; If the end of the feature we're at involved moving forward,
-	;; then we're rocking, so this iteration counts.
+	(setq on-first-iteration nil)
+
+        (eif-find-end-of-feature)
+
+	;; If the end of the feature we are at involved moving
+	;; forward, then we are rocking, so this iteration counts.
 	(if (> (point) pos)
 	    (progn
 	      (end-of-line)
 	      (setq arg (1- arg)))))))
 
-  ;; Go to beginning of next line.
   (forward-line))
 
 (defun eif-end-of-feature (&optional arg)
   "Move forward to end of feature.
-With argument, do it that many times.  Negative argument -N means move
-back to Nth preceding end of defun."
+
+With argument, do it that many times.  Negative argument means move
+back ARG preceding ends of features."
   (interactive "p")
 
-  ;; Default is to find the 1st feature end.
+  ;; Default is to find the first feature's end.
   (if (or (null arg)
 	  (= arg 0))
       (setq arg 1))
@@ -1828,8 +1858,8 @@ same clause rigidly along with this one (not implemented yet)."
   (skip-chars-forward " \t"))
 
 (defun eif-move-to-prev-non-blank ()
-  "Moves point to previous line excluding blank lines.
-Returns t if successful, nil if not."
+  "Move point to previous line excluding blank lines.
+Return t if successful, nil if not."
   (beginning-of-line)
   (re-search-backward "^[ \t]*[^ \t\n]" nil t))
 
