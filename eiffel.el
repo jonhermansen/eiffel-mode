@@ -305,7 +305,8 @@ Possibly used for error location.")
 (defun eif-compile ()
   "Compile an Eiffel root class."
   (interactive)
-  (let ((temp last-nonmenu-event))
+  (let ((temp (and (boundp 'last-nonmenu-event)
+		   last-nonmenu-event)))
 	 
     (setq eif-compile-dir (file-name-directory (buffer-file-name)))
     (setq eif-compile-target
@@ -1470,10 +1471,12 @@ does matching of parens ala \\[backward-sexp]'."
 
 (defun eif-in-comment-p ()
   "Return t if point is in a comment."
-  (save-excursion
-    (and (/= (point) (point-max)) (forward-char 1))
-    (search-backward "--" (save-excursion (beginning-of-line) (point)) t)))
-
+  (or (looking-at "--")
+      (save-excursion
+	(and (/= (point) (point-max))
+	     (/= (point) (save-excursion (end-of-line) (point)))
+	     (forward-char 1))
+	(search-backward "--" (save-excursion (beginning-of-line) (point)) t))))
 
 ;; ENHANCEME: Currently eif-beginning-of-feature only works for routines.
 ;;            It should be made more general.
