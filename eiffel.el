@@ -1093,26 +1093,19 @@ arguments see \\[re-search-forward]."
 
 (defun eif-calc-indent ()
   "Calculate the indentation of the current line of eiffel code.
-This function generally assumes that the preceding line of code is
-indented properly, although lines containing certain class-level
-constructs do not require correct indentation of the preceding line."
+This function handles the case where there is a keyword that affects
+indentation at the beginning of the current line.  For lines that
+don't start with a relevant keyword, the calculation is handed off to
+\\[eif-calc-non-keyword-indent]."
   (let ((indent   0)
-	originally-looking-at-comment originally-looking-at-lone-string
-	kw-match continuation id-colon)
+	kw-match)
 
     (save-excursion
       (eif-skip-leading-whitespace)
-
-      ;; Is the line we are trying to indent a comment line?
-      (setq originally-looking-at-comment (looking-at comment-start-skip))
-
-      ;; Is the line we are trying to indent a lone string?
-      (setq originally-looking-at-lone-string (looking-at "\"[^\"]*\"[ \t]*$"))
-
-      ;; Look for a keyword on the current line
+      
+      ;; Look for a keyword on the current line.
       (if (looking-at eif-all-keywords-regexp)
 
-	  ;; Then we are looking at a keyword
 	  (cond ((looking-at eif-class-level-keywords-regexp)
 		 ;; File level keywords (indent defaults to 0)
 		 (setq indent (eif-class-level-kw-indent-m)))
@@ -1236,162 +1229,181 @@ constructs do not require correct indentation of the preceding line."
 		   (setq indent (eif-class-level-kw-indent-m))))
 		((looking-at eif-preprocessor-keywords-regexp)
 		 (setq indent (eif-preprocessor-indent-m))))
+	;; No keyword.  Hand off...
+	(setq indent (eif-calc-indent-non-keyword))))
+    indent))
 
-	;; Else no keyword on current line,
-	;;   are we in a multi-line parenthesis expression
+(defun eif-calc-indent-non-keyword ()
+  "Calculate indentation of current Eiffel code line, without leading keyword.
+This function generally assumes that the preceding line of code is
+indented properly, and usually bases the indentation of the current
+line on that preceding line."
+  (let ((indent   0)
+	originally-looking-at-comment originally-looking-at-lone-string
+	continuation id-colon)
 
-	(if (or (and (> (eif-in-paren-expression) 0)
-		     (> (setq indent (eif-indent-multi-line)) -1))
-		(setq indent (eif-manifest-array-indent)))
+    (save-excursion
+      (eif-skip-leading-whitespace)
 
-	    ;; multi-line parenthesis expression
-	    ;; Move string continuation lines as per configuration.
-	    (if (looking-at "%")
-		(setq indent (+ indent (eif-string-continuation-indent-m))))
+      ;; Is the line we are trying to indent a comment line?
+      (setq originally-looking-at-comment (looking-at comment-start-skip))
 
-	  ;; Else Find the first preceding line with non-comment source on it
-	  ;; that is not a continuation line of a multi-line parnethesized
-	  ;; expression (and isn't a preprocessor line :-).
+      ;; Is the line we are trying to indent a lone string?
+      (setq originally-looking-at-lone-string (looking-at "\"[^\"]*\"[ \t]*$"))
 
-	  ;; Record whether this line begins with an operator.  We assume
-	  ;; that the line is a continuation line if it begins with an operator
-	  (beginning-of-line)
-	  (if (looking-at eif-operator-regexp)
-	      (setq continuation t)
-	    (setq continuation nil))
-	  ;; Record whether the line being indented begins with an "<id> :"
-	  ;; This is used in indenting assertion tag expressions.
-	  (if (looking-at "[ \t]*[a-zA-Z0-9_]+[ \t]*:")
-	      (setq id-colon t)
-	    (setq id-colon nil))
+      ;; Are we in a multi-line parenthesis expression?
+      (if (or (and (> (eif-in-paren-expression) 0)
+		   (> (setq indent (eif-indent-multi-line)) -1))
+	      (setq indent (eif-manifest-array-indent)))
 
+	  ;; Multi-line parenthesis expression.
+	  ;; Move string continuation lines as per configuration.
+	  (if (looking-at "%")
+	      (setq indent (+ indent (eif-string-continuation-indent-m))))
+
+	;; Else Find the first preceding line with non-comment source on it
+	;; that is not a continuation line of a multi-line parenthesized
+	;; expression (and isn't a preprocessor line :-).
+
+	;; Record whether this line begins with an operator.  We assume
+	;; that the line is a continuation line if it begins with an operator
+	(beginning-of-line)
+	(if (looking-at eif-operator-regexp)
+	    (setq continuation t)
+	  (setq continuation nil))
+	;; Record whether the line being indented begins with an "<id> :"
+	;; This is used in indenting assertion tag expressions.
+	(if (looking-at "[ \t]*[a-zA-Z0-9_]+[ \t]*:")
+	    (setq id-colon t)
+	  (setq id-colon nil))
+	
+	(forward-line -1)
+	(beginning-of-line)
+	(while (and (looking-at eif-non-source-line)
+		    (not (= (point) 1)))
 	  (forward-line -1)
-	  (beginning-of-line)
-	  (while (and (looking-at eif-non-source-line)
-		      (not (= (point) 1)))
-	    (forward-line -1)
-	    (beginning-of-line))
-	  (if (eif-line-contains-close-paren)
-	      (backward-sexp))
-	  (eif-skip-leading-whitespace)
-
-	  (cond ((and (= (point) 1)
-		      originally-looking-at-comment
-		      (setq indent (eif-class-level-comment-indent-m))))
-		;; 'eif-is-keyword-regexp' case must precede
-		;; '(not eif-all-keywords-regexp)' case since "is" is not
-		;; part of 'eif-all-keywords-regexp'
-		((or (looking-at eif-is-keyword-regexp)
-		     (looking-at eif-multiline-routine-is-keyword-regexp)
-		     (looking-at eif-obsolete-keyword))
-		 (if originally-looking-at-comment
-		     ;; Then  the line we are trying to indent is a comment
-		     (setq indent (eif-feature-level-comment-indent-m))
-		   ;; Else  the line being indented is not a comment
-		   (setq indent (eif-feature-level-kw-indent-m))))
-		((looking-at eif-feature-indentation-keywords-regexp)
-		 (setq indent (eif-feature-level-indent-m)))
-		((looking-at eif-indentation-keywords-regexp)
-		 (if (looking-at eif-end-on-current-line)
-		     (setq indent (eif-current-line-indent))
-		   (setq indent
-			 (+ (eif-current-line-indent) eif-indent-increment))))
-		((looking-at eif-solitary-then-keyword)
-		 (setq indent (- (+ (eif-current-line-indent) eif-indent-increment)
-				 (eif-then-indent-m))))
-		((looking-at eif-then-keyword)
-		 (setq indent (eif-current-line-indent)))
-		((looking-at (concat eif-end-keyword eif-non-id-char-regexp))
-		 (if (= (setq indent (eif-current-line-indent))
-			(eif-feature-level-kw-indent-m))
-		     (setq indent (eif-feature-level-indent-m))
-		   (eif-matching-line)
-		   (if (string-match eif-check-keyword eif-matching-kw-for-end)
-		       (setq indent (- indent (eif-check-keyword-indent-m))))))
-		((looking-at eif-variable-or-const-regexp)
-		 ;;Either a variable declaration or a pre or post condition tag
-		 (if originally-looking-at-comment
-		     ;; Then  the line we are trying to indent is a comment
-		     (if (= (setq indent (eif-current-line-indent))
-			    (eif-feature-level-indent-m))
-			 ;; Then - a feature level comment
-			 (setq indent (eif-feature-level-comment-indent-m))
-		       ;; Else - some other kind of comment
-		       (setq indent (+ indent (eif-body-comment-indent-m))))
-		   ;; Else  the line being indented is not a comment
-		   (if (setq indent (eif-indent-assertion-continuation id-colon))
-		       indent
-		     ;; One of the ways of getting here is when we're
-		     ;; in a split line in an indexing clause.
-		     ;; Strings on their own need to be given some
-		     ;; extra indent.
-		     (if originally-looking-at-lone-string
-			 (if (looking-at "[ \t]*\"[^\"]*\"[ \t]*$")
-			     (setq indent (eif-current-line-indent))
-			   (setq indent (+ (eif-current-line-indent)
-					   eif-indent-increment)))
-		       (setq indent (eif-current-line-indent))))))
-		((setq indent (eif-manifest-array-start))
-		 indent)
-		((not (looking-at eif-all-keywords-regexp))
-		 (if originally-looking-at-comment
-		     ;; Then  the line we are trying to indent is a comment
-		     (cond ((eif-continuation-line)
-			    (setq indent
-				  (+ (- (eif-current-line-indent)
-					eif-indent-increment)
-				     (eif-body-comment-indent-m))))
-			   ;; preceding line is at eif-feature-level-indent -
-			   ;; assume that the preceding line is a parent
-			   ;; class in an inherit clause
-			   ((= (eif-current-line-indent)
-			       (eif-feature-level-indent-m))
-			    (setq indent
-				  (+ (eif-inherit-level-kw-indent-m)
-				     (eif-body-comment-indent-m))))
-			   (t
-			    (setq indent
-				  (+ (eif-current-line-indent)
-				     (eif-body-comment-indent-m)))))
-		   ;; Else line being indented is not a comment
-
-		   ;; The line the point is on is the one above the line being
-		   ;; indented
-		   (beginning-of-line)
-		   (if (or continuation (looking-at eif-operator-eol-regexp))
-		       ;; Then the line being indented is a continuation line
-		       (if  (eif-continuation-line)
-			   ;; The line preceding the line being indented is
-			   ;; also a continuation line.  Indent to the current
-			   ;; line indentation.
+	  (beginning-of-line))
+	(if (eif-line-contains-close-paren)
+	    (backward-sexp))
+	(eif-skip-leading-whitespace)
+	
+	(cond ((and (= (point) 1)
+		    originally-looking-at-comment
+		    (setq indent (eif-class-level-comment-indent-m))))
+	      ;; 'eif-is-keyword-regexp' case must precede
+	      ;; '(not eif-all-keywords-regexp)' case since "is" is not
+	      ;; part of 'eif-all-keywords-regexp'
+	      ((or (looking-at eif-is-keyword-regexp)
+		   (looking-at eif-multiline-routine-is-keyword-regexp)
+		   (looking-at eif-obsolete-keyword))
+	       (if originally-looking-at-comment
+		   ;; Then  the line we are trying to indent is a comment
+		   (setq indent (eif-feature-level-comment-indent-m))
+		 ;; Else  the line being indented is not a comment
+		 (setq indent (eif-feature-level-kw-indent-m))))
+	      ((looking-at eif-feature-indentation-keywords-regexp)
+	       (setq indent (eif-feature-level-indent-m)))
+	      ((looking-at eif-indentation-keywords-regexp)
+	       (if (looking-at eif-end-on-current-line)
+		   (setq indent (eif-current-line-indent))
+		 (setq indent
+		       (+ (eif-current-line-indent) eif-indent-increment))))
+	      ((looking-at eif-solitary-then-keyword)
+	       (setq indent (- (+ (eif-current-line-indent) eif-indent-increment)
+			       (eif-then-indent-m))))
+	      ((looking-at eif-then-keyword)
+	       (setq indent (eif-current-line-indent)))
+	      ((looking-at (concat eif-end-keyword eif-non-id-char-regexp))
+	       (if (= (setq indent (eif-current-line-indent))
+		      (eif-feature-level-kw-indent-m))
+		   (setq indent (eif-feature-level-indent-m))
+		 (eif-matching-line)
+		 (if (string-match eif-check-keyword eif-matching-kw-for-end)
+		     (setq indent (- indent (eif-check-keyword-indent-m))))))
+	      ((looking-at eif-variable-or-const-regexp)
+	       ;;Either a variable declaration or a pre or post condition tag
+	       (if originally-looking-at-comment
+		   ;; Then  the line we are trying to indent is a comment
+		   (if (= (setq indent (eif-current-line-indent))
+			  (eif-feature-level-indent-m))
+		       ;; Then - a feature level comment
+		       (setq indent (eif-feature-level-comment-indent-m))
+		     ;; Else - some other kind of comment
+		     (setq indent (+ indent (eif-body-comment-indent-m))))
+		 ;; Else  the line being indented is not a comment
+		 (if (setq indent (eif-indent-assertion-continuation id-colon))
+		     indent
+		   ;; One of the ways of getting here is when we're
+		   ;; in a split line in an indexing clause.
+		   ;; Strings on their own need to be given some
+		   ;; extra indent.
+		   (if originally-looking-at-lone-string
+		       (if (looking-at "[ \t]*\"[^\"]*\"[ \t]*$")
 			   (setq indent (eif-current-line-indent))
-			 ;; Else The line preceding the line being indented is
-			 ;; not a continuation line.  Indent an extra
-			 ;; eif-continuation-indent
 			 (setq indent (+ (eif-current-line-indent)
-					 (eif-continuation-indent-m))))
-		     ;; Else the line being indented is not a continuation line.
-		     (if (eif-continuation-line)
-			 (if id-colon
-			     ;; Then the line preceding the one being indented
-			     ;; is an assertion continuation.  Indent the current
-			     ;; line to the same level as the preceding assertion
-			     ;; tag.
-			     (setq indent (eif-indent-assertion-tag))
-			   ;; Then the line preceding the one being indented is
-			   ;; a continuation line.  Un-indent by an
-			   ;; eif-continuation-indent.
-			   (setq indent (- (eif-current-line-indent)
-					   eif-indent-increment)))
-		       ;; Else the line preceding the line being indented is
-		       ;; also not a continuation line.
-
-		       (if (and (looking-at "[ \t]*\"[^\"]*\"[ \t]*$")
-				(not originally-looking-at-lone-string))
-			   (setq indent (- (eif-current-line-indent)
-					   eif-indent-increment))
-			 ;; Else use the current indent.
-			 (setq indent (eif-current-line-indent)))))))))))
+					 eif-indent-increment)))
+		     (setq indent (eif-current-line-indent))))))
+	      ((setq indent (eif-manifest-array-start))
+	       indent)
+	      ((not (looking-at eif-all-keywords-regexp))
+	       (if originally-looking-at-comment
+		   ;; Then  the line we are trying to indent is a comment
+		   (cond ((eif-continuation-line)
+			  (setq indent
+				(+ (- (eif-current-line-indent)
+				      eif-indent-increment)
+				   (eif-body-comment-indent-m))))
+			 ;; preceding line is at eif-feature-level-indent -
+			 ;; assume that the preceding line is a parent
+			 ;; class in an inherit clause
+			 ((= (eif-current-line-indent)
+			     (eif-feature-level-indent-m))
+			  (setq indent
+				(+ (eif-inherit-level-kw-indent-m)
+				   (eif-body-comment-indent-m))))
+			 (t
+			  (setq indent
+				(+ (eif-current-line-indent)
+				   (eif-body-comment-indent-m)))))
+		 ;; Else line being indented is not a comment
+		 
+		 ;; The line the point is on is the one above the line being
+		 ;; indented
+		 (beginning-of-line)
+		 (if (or continuation (looking-at eif-operator-eol-regexp))
+		     ;; Then the line being indented is a continuation line
+		     (if  (eif-continuation-line)
+			 ;; The line preceding the line being indented is
+			 ;; also a continuation line.  Indent to the current
+			 ;; line indentation.
+			 (setq indent (eif-current-line-indent))
+		       ;; Else The line preceding the line being indented is
+		       ;; not a continuation line.  Indent an extra
+		       ;; eif-continuation-indent
+		       (setq indent (+ (eif-current-line-indent)
+				       (eif-continuation-indent-m))))
+		   ;; Else the line being indented is not a continuation line.
+		   (if (eif-continuation-line)
+		       (if id-colon
+			   ;; Then the line preceding the one being indented
+			   ;; is an assertion continuation.  Indent the current
+			   ;; line to the same level as the preceding assertion
+			   ;; tag.
+			   (setq indent (eif-indent-assertion-tag))
+			 ;; Then the line preceding the one being indented is
+			 ;; a continuation line.  Un-indent by an
+			 ;; eif-continuation-indent.
+			 (setq indent (- (eif-current-line-indent)
+					 eif-indent-increment)))
+		     ;; Else the line preceding the line being indented is
+		     ;; also not a continuation line.
+		     
+		     (if (and (looking-at "[ \t]*\"[^\"]*\"[ \t]*$")
+			      (not originally-looking-at-lone-string))
+			 (setq indent (- (eif-current-line-indent)
+					 eif-indent-increment))
+		       ;; Else use the current indent.
+		       (setq indent (eif-current-line-indent))))))))))
     indent))
 
 (defun eif-continuation-line ()
