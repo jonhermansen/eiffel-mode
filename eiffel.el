@@ -1120,11 +1120,8 @@ arguments see \\[re-search-forward]."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun eif-skip-leading-whitespace ()
-  "Move to the first non-whitespace character on the current line."
-      (end-of-line)
-      (let ((line-end (point)))
-	(beginning-of-line)
-	(skip-syntax-forward "-" line-end)))
+  "OBSOLETE 2006-04-26: please use `back-to-indentation' instead."
+  (back-to-indentation))
 
 (defun eif-calc-indent ()
   "Calculate the indentation of the current line of eiffel code.
@@ -1136,7 +1133,7 @@ don't start with a relevant keyword, the calculation is handed off to
 	kw-match)
 
     (save-excursion
-      (eif-skip-leading-whitespace)
+      (back-to-indentation)
 
       ;; Look for a keyword on the current line.
       (if (looking-at eif-all-keywords-regexp)
@@ -1289,7 +1286,7 @@ line on that preceding line."
 	continuation id-colon)
 
     (save-excursion
-      (eif-skip-leading-whitespace)
+      (back-to-indentation)
 
       ;; Is the line we are trying to indent a comment line?
       (setq originally-looking-at-comment (looking-at comment-start-skip))
@@ -1308,7 +1305,7 @@ line on that preceding line."
             (let (beginning-of-line-position)
               (save-excursion
                 (forward-line -1)
-                (eif-skip-leading-whitespace)
+                (back-to-indentation)
                 (setq indent (current-column)))))
         ;; Are we in a multi-line parenthesis expression?
         (if (or (and (> (eif-in-paren-expression) 0)
@@ -1347,7 +1344,7 @@ line on that preceding line."
                 (re-search-backward "\"[[]\n" 0 t)))
           (if (eif-line-contains-close-paren)
               (backward-sexp))
-          (eif-skip-leading-whitespace)
+          (back-to-indentation)
 
           (cond ((and (= (point) 1)
                       originally-looking-at-comment
@@ -2177,7 +2174,7 @@ The feature visible is the one that contains point or follows point."
 (defun eif-current-line-indent ()
   "Return the indentation of the line containing the point."
   (save-excursion
-    (eif-skip-leading-whitespace)
+    (back-to-indentation)
     (current-column)))
 
 (defun eif-in-quoted-string-p (&optional non-strict-p)
