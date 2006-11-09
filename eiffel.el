@@ -2366,7 +2366,7 @@ Return t if successful, nil if not."
   (if (>= (point) 2048)
     (setq limit (- (point) 2048)))
   (save-excursion
-    (re-search-backward "\\([^%]\"[[]\n\\|\n[]]\"\\)" limit t)
+    (re-search-backward "\\([^%]\"[[]\n\\|\n[ \t]*[]]\"\\)" limit t)
     (if (looking-at "[ \t]\"[[]\n")
       (setq multi-line-string t)))
   multi-line-string))
