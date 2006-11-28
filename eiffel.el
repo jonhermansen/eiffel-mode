@@ -1344,6 +1344,9 @@ current line on that preceding line. This function assumes
           (if (or (eif-previous-line-is-continuation) (eif-previous-previous-line-is-continuation))
               previous-line-indent
             (+ previous-line-indent eif-indent-increment)))
+         ;; if previous line ends with the "then" of an if statement
+         ;; we increase the indent relative to the "if"
+         ;; TODO
          ;; if line starts with closing parenthesis, we match the indent
          ;; of opening parenthesis.
          ((looking-at "\)")
@@ -1376,10 +1379,10 @@ function assumes `back-to-indentation' is in effect."
       (setq looking-at-comment (looking-at "--"))
 
       (backward-sexp)
-      ;; in case where we might be looking at feature {NONE} for example
-      ;; go back one sexp to point at feature
-      ;; 2006-11-07: formerly also looked at ')' character, removed it.
-      (if (looking-at "[{]")
+      ;; in case where we might be looking at feature {NONE} or debug
+      ;; ("test") or once ("thread") go back one sexp to point at
+      ;; feature
+      (if (looking-at "[{\(]")
           (backward-sexp))
       (cond
        ;; the end statement is a bit difficult: inside a body the next
