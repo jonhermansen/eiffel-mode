@@ -636,9 +636,10 @@ See `eif-operator-keywords'.")
     "\\)\\|:=\\)[ \t]*\\(--.*\\)?$")
   "Eiffel operators - used to identify continuation lines.")
 
+;; strip keyword is obsolete, but still in ISE Eiffel 5.7
 (defconst eif-misc-keywords
   (concat "agent\\|all\\|as\\|frozen\\|infix\\|like" "\\|"
-    "old\\|precursor\\|prefix\\|retry\\|unique\\|xor" "\\|"
+    "old\\|precursor\\|prefix\\|retry\\|strip\\|unique\\|xor" "\\|"
     "expanded\\|reference")
   "Eiffel miscellaneous keywords.")
 
