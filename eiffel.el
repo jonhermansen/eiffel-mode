@@ -273,8 +273,8 @@ relative to indent of previous line."
   :type 'boolean
   :group 'eiffel-indent)
 
-(defcustom eif-multi-line-string-indent t
-  "*Set to nil if multi line strings need indentation or need to be left alone when indenting."
+(defcustom eif-verbatim-string-indent nil
+  "*Set to t if multi line strings need indentation or need to be left alone when indenting. Default is not to indent."
   :type 'boolean
   :group 'eiffel-indent)
 
@@ -1304,20 +1304,20 @@ current line on that preceding line. This function assumes
     (save-excursion
 
       ;; Are we in a multi-line string expression?
-      (if (eif-in-multi-line-string-expression)
+      (if (eif-in-verbatim-string-expression)
           ;; Depending on a setting, we either don't indent, or indent
           ;; just as much as the previous line.
           ;; The latter implies that the first line, immediately below
           ;; the "[ is indented at the same level as the feature name,
           ;; which isn't too bad.
-          (if eif-multi-line-string-indent
-              (if (looking-at "[]]\"")
+          (if eif-verbatim-string-indent
+              (if (looking-at "[]}]\"")
                   0
                 (let (beginning-of-line-position)
                   (save-excursion
                     (end-of-line 0)
                     (backward-char 2)
-                    (if (looking-at "\"[[]")
+                    (if (looking-at "\"[[{]")
                         0
                       (back-to-indentation)
                       (current-column)))))
@@ -1497,22 +1497,6 @@ until or if?"
     (beginning-of-line)
     (backward-sexp)
     (eif-line-ends-with-continuation-symbol)))
-
-(defun eif-calc-indent-in-multi-line-string ()
-  "Indentation if inside a multi-line string."
-  ;; If user has just ended the string, the identation is zero.
-  (if (looking-at "[]]\"")
-      0
-    ;; Else for first line just below "[ the indentation is zero.
-    ;; For any subsequent line it's the identation of the previous line.
-    (save-excursion
-      (forward-line -1)
-      (end-of-line)
-      (backward-char 3)
-      (if (looking-at "[^%]\"[[]")
-          0
-        (back-to-indentation)
-        (current-column)))))
 
 (defun eif-previous-line-indent ()
   "Amount of identation of previous line."
@@ -2369,17 +2353,17 @@ Return t if successful, nil if not."
   (beginning-of-line)
   (re-search-backward "^[ \t]*[^ \t\n]" nil t))
 
-(defun eif-in-multi-line-string-expression ()
+(defun eif-in-verbatim-string-expression ()
   "Determine if we are inside a multi-line string expression. Searches a maximu m of 2048 characters backward, so will not work for really large strings."
   (interactive)
-  (let (multi-line-string (limit 0))
+  (let (verbatim-string (limit 0))
   (if (>= (point) 2048)
     (setq limit (- (point) 2048)))
   (save-excursion
-    (re-search-backward "\\([^%]\"[[]\n\\|\n[ \t]*[]]\"\\)" limit t)
-    (if (looking-at "[ \t]\"[[]\n")
-      (setq multi-line-string t)))
-  multi-line-string))
+    (re-search-backward "\\([^%]\"[[{]\n\\|\n[ \t]*[]}]\"\\)" limit t)
+    (if (looking-at "[ \t]\"[[{]\n")
+      (setq verbatim-string t)))
+  verbatim-string))
 
 (defvar eif-last-feature-level-indent -1)
 (defvar eif-feature-level-indent-regexp nil)
