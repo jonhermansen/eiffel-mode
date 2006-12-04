@@ -1354,6 +1354,11 @@ current line on that preceding line. This function assumes
           (forward-char)
           (backward-list)
           (current-column))
+         ;; if we find an opening parenthesis, the line should be
+         ;; indented one indent more than the line that has the
+         ;; opening parenthesis.
+         ((eif-in-paren-expression)
+          (+ (eif-in-paren-expression) eif-indent-increment))
          ;; else we have to look at the previous line
          (t
           (setq what-indentation (eif-what-indentation))
@@ -2379,26 +2384,25 @@ Return t if successful, nil if not."
 (defvar eif-last-feature-level-indent -1)
 (defvar eif-feature-level-indent-regexp nil)
 (defun eif-in-paren-expression ()
-  "Determine if we are inside of a parenthesized expression. Will return invalid data if called while inside a string."
+  "Determine if we are inside of a parenthesized expression. Returns
+the indentation of the line with the opening parenthesis. Will return
+invalid data if called while inside a string."
   (interactive)
-  (let ((paren-count 0) (limit 0))
-  (save-excursion
-    (if (= eif-last-feature-level-indent (eif-feature-level-indent-m))
-    (setq limit
-    (re-search-backward eif-feature-level-indent-regexp nil t))
-  (setq eif-last-feature-level-indent (eif-feature-level-indent-m))
-  (setq eif-feature-level-indent-regexp
-      (concat "^" (make-string eif-last-feature-level-indent ? )
-        "[^ \t\n]"))
-  (setq limit
-      (or (re-search-backward eif-feature-level-indent-regexp nil t)
-      0))))
-  (save-excursion
-    (while (re-search-backward "[][()]" limit t)
-  (if (looking-at "[[(]")
-    (setq paren-count (1+ paren-count))
-    (setq paren-count (1- paren-count)))))
-  paren-count))
+  (let ((paren-count 0) limit indent)
+    (save-excursion
+      (forward-char -1024)
+      (setq limit (point)))
+    (save-excursion
+      (while (and (<= paren-count 0) (re-search-backward "[()]" limit t))
+        (if (looking-at "[(]")
+            (setq paren-count (1+ paren-count))
+          (setq paren-count (1- paren-count))))
+      (setq indent
+            (if (<= paren-count 0)
+                nil
+              (back-to-indentation)
+              (current-column))))
+    indent))
 
 (defun eif-manifest-array-common ()
   "Common code for handling indentation/presence of Eiffel manifest arrays."
