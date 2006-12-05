@@ -301,6 +301,11 @@ big number to enable it for all paragraphs."
   :type 'integer
   :group 'eiffel-indent)
 
+(defcustom eif-underscore-is-part-of-word t
+  "*Set to t if C-right (`forward-word') should not stop when an underscore is encountered, but go past the whole identifier. If set to nil underscore will act as a delimiter within feature and class names and `forward-word' will stop at that point. You will have to restart Emacs for this setting to take effect."
+  :type 'boolean
+  :group 'eiffel-identifier)
+
 (defcustom eif-use-gnu-eiffel t
   "*If t include support for compilation using GNU SmartEiffel."
   :type 'boolean
@@ -697,7 +702,7 @@ Does not include `is'.  See `eif-all-keywords'.")
 ;; eif-{beginning,end}-of-feature.
 
 (defconst eif-routine-begin-regexp
-  "\\([a-z_][a-zA-Z_0-9]*\\)\\s-*\\(([^)]*)\\)?\\s-*\\(:\\s-*[A-Z]\\([][,A-Za-z0-9_]\\|\\s-\\)*\\)?\\s-*\\<is\\>\\s-*\\(--.*\\)?$"
+  "\\([a-z_][a-zA-Z_0-9]*\\)\\s-*\\(([^)]*)\\)?\\s-*\\(:\\s-*[A-Z]\\([][,A-Za-z0-9_]\\|\\s-\\)*\\)?\\(\\s-\\|\n\\)*\\<is\\>\\s-*\\(--.*\\)?$"
   "Regexp matching the beginning of an Eiffel routine declaration.")
 
 (defconst eif-attribute-regexp
@@ -756,10 +761,7 @@ This will also match local variable and parameter declarations.")
 (defconst eiffel-font-lock-keywords-2
   (append
    eiffel-font-lock-keywords-1
-   `(;; Assertions.
-   ;; FIXME: Cyril thinks these should just be part of the keywords below.
-   (,(eif-anchor "check\\|ensure then\\|ensure\\|invariant\\|require else\\|require\\|variant") 2 font-lock-reference-face nil)
-
+   `(
    ;; Preprocessor keywords.  Note that, by luck more than planning,
    ;; these aren't font-locked when they're not indented, since the
    ;; '#' isn't a word boundary (which is added by eif-anchor).
@@ -772,6 +774,7 @@ This will also match local variable and parameter declarations.")
    (,(eif-anchor eif-operator-keywords)     2 font-lock-keyword-face nil)
    (,(eif-anchor eif-misc-keywords)         2 font-lock-keyword-face nil)
    (,(eif-anchor eif-all-keywords)          2 font-lock-keyword-face nil)
+   (,(eif-anchor "check\\|ensure then\\|ensure\\|invariant\\|require else\\|require\\|variant") 2 font-lock-keyword-face nil)
 
    ;; Quoted expr's in comments.
    ("`[^`'\n]*'" 0 font-lock-string-face t)
@@ -1898,11 +1901,9 @@ does matching of parens ala \\[backward-sexp]'."
   (define-key map [(control x) ?n ?d] 'eif-narrow-to-feature)
   (setq eiffel-mode-map map)))
 
-(defvar eiffel-mode-syntax-table nil
-  "Syntax table in use in Eiffel-mode buffers.")
+(defun eiffel-mode-syntax-table ()
+  "Syntax table in use in Eiffel-mode buffers."
 
-(if eiffel-mode-syntax-table
-  nil
   (let ((table (make-syntax-table))
   (i 0))
   (while (< i ?0)
@@ -1922,8 +1923,9 @@ does matching of parens ala \\[backward-sexp]'."
     (setq i (1+ i)))
   (modify-syntax-entry ?  "    " table)
   (modify-syntax-entry ?-  ". 12" table)
-  ;; is this the entry to make "_" part of a word?
-  (modify-syntax-entry ?_  "_  " table)
+  (if eif-underscore-is-part-of-word
+      (modify-syntax-entry ?_  "w  " table)
+    (modify-syntax-entry ?_  "_  " table))
   (modify-syntax-entry ?\t "    " table)
   (modify-syntax-entry ?\n ">   " table)
   (modify-syntax-entry ?\f ">   " table)
@@ -1951,7 +1953,7 @@ does matching of parens ala \\[backward-sexp]'."
   (modify-syntax-entry ?! "." table)
   (modify-syntax-entry ?. "." table)
   (modify-syntax-entry ?, "." table)
-  (setq eiffel-mode-syntax-table table)))
+  table))
 
 (defun eif-add-menu ()
   "Add the \"Eiffel\" menu to the menu bar."
@@ -2018,7 +2020,7 @@ compilation and indentation variables that can be customized."
 
   (use-local-map eiffel-mode-map)
   (eif-add-menu)
-  (set-syntax-table eiffel-mode-syntax-table)
+  (set-syntax-table (eiffel-mode-syntax-table))
 
   ;; Make local variables.
   (make-local-variable 'paragraph-start)
