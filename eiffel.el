@@ -1146,7 +1146,7 @@ arguments see \\[re-search-forward]."
 This function handles the case where there is a keyword that affects
 indentation at the beginning of the current line.  For lines that
 don't start with a relevant keyword, the calculation is handed off to
-\\[eif-calc-non-keyword-indent]."
+\\[eif-calc-indent-non-keyword]."
   (let ((indent   0)
   kw-match)
 
@@ -1342,12 +1342,9 @@ current line on that preceding line. This function assumes
          ;; if current line starts with an operator, we have to indent or
          ;; stay at the same indent if the previous line is already a continuation.
          ((looking-at eif-operator-keywords)
-          (if (or (eif-previous-line-is-continuation) (eif-previous-previous-line-is-continuation))
+          (if (or (eif-previous-line-ends-with-continuation) (eif-previous-previous-line-is-continuation))
               previous-line-indent
             (+ previous-line-indent eif-indent-increment)))
-         ;; if previous line ends with the "then" of an if statement
-         ;; we increase the indent relative to the "if"
-         ;; TODO
          ;; if line starts with closing parenthesis, we match the indent
          ;; of opening parenthesis.
          ((looking-at "\)")
@@ -1403,7 +1400,14 @@ function assumes `back-to-indentation' is in effect."
        ;; then and else must be treated differently, it should not be
        ;; part of the "and then" or "or else" operators.
        ((and (looking-at "then\\([ \t]\\|$\\)") (not (eif-is-preceded-by "and")))
-        'eif-what-indent-increase)
+        ;; but the then could be the end of a continuation line
+        ;; so the best thing would be indent according to the if/when
+        ;; keyword. That one maybe hard to find, so we'll simply
+        ;; don't indent when then is the end of a continuation line.
+        ;; TODO: to be improved.
+        (if (eif-current-line-is-continuation)
+            'eif-what-indent-as-previous
+            'eif-what-indent-increase))
        ((and (looking-at "else\\([ \t]\\|$\\)") (not (eif-is-preceded-by "or")))
         'eif-what-indent-increase)
        ;; we always indent the next line if the previous line ends
@@ -1414,7 +1418,7 @@ function assumes `back-to-indentation' is in effect."
        ;; continuation we have to distinguish between the first
        ;; continuation and subsequent continuations.
        ((eif-line-ends-with-continuation-symbol)
-        (if (and (not (eif-line-begins-with-label)) (or (eif-current-line-is-continuation) (eif-previous-line-is-continuation) (eif-is-first-line-after-boolean-keyword)))
+        (if (and (not (eif-line-begins-with-label)) (or (eif-current-line-starts-with-continuation) (eif-previous-line-ends-with-continuation) (eif-is-first-line-after-boolean-keyword)))
             'eif-what-indent-as-previous
           'eif-what-indent-increase))
        ;; The current line is a continuation if the previous line is a
@@ -1423,7 +1427,7 @@ function assumes `back-to-indentation' is in effect."
        ;; indication that the next line is a continuation. In that
        ;; case we have to decrease the indentation back to the first
        ;; line we can find that isn't a continuation.
-       ((eif-previous-line-is-continuation)
+       ((eif-previous-line-ends-with-continuation)
         (eif-indent-of-last-non-continuation-line))
        ((= (point) 1)
         (if looking-at-comment
@@ -1470,19 +1474,25 @@ until or if?"
       (looking-at "[ \t]*\\([@*/+:=]\\|-[^-]\\)")))))
 
 (defun eif-current-line-is-continuation ()
+  "Is the current line a continuation?"
+  (or
+   (eif-current-line-starts-with-continuation)
+   (eif-previous-line-ends-with-continuation)))
+
+(defun eif-current-line-starts-with-continuation ()
   "Is current line a continuation, based upon if it starts with an operator?"
   (save-excursion
     (back-to-indentation)
     (looking-at eif-operator-regexp)))
 
-(defun eif-previous-line-is-continuation ()
+(defun eif-previous-line-ends-with-continuation ()
   "Does the previous line indicate that the next line is a continuation?"
   (save-excursion
     (condition-case nil
-        (do-eif-previous-line-is-continuation)
+        (do-eif-previous-line-ends-with-continuation)
       (error nil))))
 
-(defun do-eif-previous-line-is-continuation ()
+(defun do-eif-previous-line-ends-with-continuation ()
   "Does the previous line indicate that the next line is a continuation?"
   (save-excursion
     (beginning-of-line)
@@ -1521,8 +1531,8 @@ until or if?"
   "Amount of identation of last line that isn't a continuation"
   (save-excursion
     (while (or
-            (eif-current-line-is-continuation)
-            (eif-previous-line-is-continuation))
+            (eif-current-line-starts-with-continuation)
+            (eif-previous-line-ends-with-continuation))
       (beginning-of-line)
       (backward-sexp))
     (back-to-indentation)
@@ -1909,6 +1919,7 @@ does matching of parens ala \\[backward-sexp]'."
     (setq i (1+ i)))
   (modify-syntax-entry ?  "    " table)
   (modify-syntax-entry ?-  ". 12" table)
+  ;; is this the entry to make "_" part of a word?
   (modify-syntax-entry ?_  "_  " table)
   (modify-syntax-entry ?\t "    " table)
   (modify-syntax-entry ?\n ">   " table)
@@ -2372,10 +2383,10 @@ Return t if successful, nil if not."
 the indentation of the line with the opening parenthesis. Will return
 invalid data if called while inside a string."
   (interactive)
-  (let ((paren-count 0) limit indent)
+  (let ((paren-count 0) (limit 0) indent)
     (save-excursion
-      (forward-char -1024)
-      (setq limit (point)))
+      (if (>= (point) 1024)
+          (setq limit (- (point) 1024)))
     (save-excursion
       (while (and (<= paren-count 0) (re-search-backward "[()]" limit t))
         (if (looking-at "[(]")
@@ -2386,7 +2397,7 @@ invalid data if called while inside a string."
                 nil
               (back-to-indentation)
               (current-column))))
-    indent))
+    indent)))
 
 (defun eif-manifest-array-common ()
   "Common code for handling indentation/presence of Eiffel manifest arrays."
@@ -2430,94 +2441,6 @@ invalid data if called while inside a string."
       (re-search-forward "^[ \t]*" limit t)
       (setq indent (current-column))))))
   indent))
-
-;; ----------------------------------------------------------------------
-;; The function below is derived from "eif-mult-fmt.el"
-;; Copyright (C) 1985 Free Software Foundation, Inc.
-;; Copyright (C) 1990 Bob Weiner, Motorola Inc.
-;; Available for use and distribution under the same terms as GNU Emacs.
-;; ----------------------------------------------------------------------
-
-(defun eif-indent-multi-line (&optional parse-start)
-  "Return indentation for line within parentheses or double quotes.
-That is, we are in a multi-line parenthesised or double-quoted
-expression, and want to know the suggested indentation for the current
-line.  If we are not within such an expression then return -1.
-Optional argument PARSE-START is buffer position at which to begin
-parsing, default is to begin at the feature enclosing or preceding
-point."
-  (let ((eif-opoint (point))
-  (indent-point (progn (beginning-of-line) (point)))
-  (eif-ind-val -1)
-  (eif-in-str nil)
-  (eif-paren-depth 0)
-  (retry t)
-  state
-  ;; setting this to a number inhibits calling hook
-  last-sexp containing-sexp)
-  (if parse-start
-  (goto-char parse-start)
-    (eif-beginning-of-feature))
-  ;; Find outermost containing sexp
-  (while (< (point) indent-point)
-    (setq state (parse-partial-sexp (point) indent-point 0)))
-  ;; Find innermost containing sexp
-  (while (and retry
-    state
-    (> (setq eif-paren-depth (elt state 0)) 0))
-    (setq retry nil)
-    (setq last-sexp (elt state 2))
-    (setq containing-sexp (elt state 1))
-    ;; Position following last unclosed open.
-    (goto-char (1+ containing-sexp))
-    ;; Is there a complete sexp since then?
-    (if (and last-sexp (> last-sexp (point)))
-    ;; Yes, but is there a containing sexp after that?
-    (let ((peek (parse-partial-sexp last-sexp indent-point 0)))
-    (if (setq retry (car (cdr peek))) (setq state peek)))))
-  (if retry
-  nil
-    ;; Innermost containing sexp found
-    (goto-char (1+ containing-sexp))
-    (if (not last-sexp)
-    ;; indent-point immediately follows open paren.
-    nil
-  ;; Find the start of first element of containing sexp.
-  (parse-partial-sexp (point) last-sexp 0 t)
-  (cond ((looking-at "\\s(")
-       ;; First element of containing sexp is a list.
-       ;; Indent under that list.
-       )
-      ((> (save-excursion (forward-line 1) (point))
-      last-sexp)
-       ;; This is the first line to start within the containing sexp.
-       (backward-prefix-chars))
-      (t
-       ;; Indent beneath first sexp on same line as last-sexp.
-       ;; Again, it's almost certainly a routine call.
-       (goto-char last-sexp)
-       (beginning-of-line)
-       (parse-partial-sexp (point) last-sexp 0 t)
-       (backward-prefix-chars))))
-    (setq eif-ind-val (current-column)))
-  ;; Point is at the point to indent under unless we are inside a string.
-  (setq eif-in-str (elt state 3))
-  (goto-char eif-opoint)
-  (if (not eif-in-str)
-  nil
-    ;; Inside a string, indent 1 past string start
-    (setq eif-paren-depth 1);; To account for being inside string
-    (save-excursion
-  (if (re-search-backward "\"" nil t)
-    (if eif-indent-string-continuations-relatively-flag
-    (setq eif-ind-val (1+ (current-column)))
-      (setq eif-ind-val (eif-current-line-indent)))
-    (goto-char indent-point)
-    (if (looking-at "^[ \t]*[^ \t\n]")
-      (eif-move-to-prev-non-blank))
-    (skip-chars-forward " \t")
-    (setq eif-ind-val (current-column)))))
-  (if (> eif-paren-depth 0) eif-ind-val -1)))
 
 ;; ----------------------------------------------------------------------
 ;; imenu support, great for browsing foreign code.
