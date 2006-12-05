@@ -105,7 +105,7 @@ that was shipped with Emacs, you should report the Emacs version!")
   :group 'eiffel-indent)
 
 (defcustom eif-class-level-kw-indent 0
-  "*Indentation for Class level keywords.
+  "*Indentation for class level keywords.
 Specified as number of `eif-indent-increments'.  See the variable
 `eif-class-level-keywords-regexp'."
   :type 'integer
@@ -118,7 +118,7 @@ be negative."
   :type 'integer
   :group 'eiffel-indent)
 
-(defcustom eif-class-level-comment-indent 0
+(defcustom eif-class-level-comment-indent 2
   "*Indentation of comments at the beginning of a class.
 Specified as number of `eif-indent-increments'."
   :type 'integer
@@ -335,12 +335,12 @@ in Debian GNU/Linux, when the default value is \"se-compile\"."
 ;;
 
 (defmacro eif-class-level-kw-indent-m ()
-  "Indentation amount for Class level keywords (in number of spaces)."
+  "Indentation amount for class level keywords (in number of spaces)."
   '(+ (* eif-class-level-kw-indent eif-indent-increment)
     eif-extra-class-level-kw-indent))
 
 (defmacro eif-class-level-comment-indent-m ()
-  "Indentation amount for Class level comments (in number of spaces)."
+  "Indentation amount for class level comments (in number of spaces)."
   '(+ (* eif-class-level-comment-indent eif-indent-increment)
     eif-extra-class-level-comment-indent))
 
@@ -1330,9 +1330,11 @@ current line on that preceding line. This function assumes
         (cond
          ;;
          ((< previous-line-indent 0) (+ (abs previous-line-indent) eif-indent-increment))
-         ;; recognise feature level comments
-         ((and (looking-at "--") (= previous-line-indent (eif-feature-level-indent-m)))
-          (eif-feature-level-comment-indent-m))
+         ;; recognise class and feature level comments
+         ((and (looking-at "--") (or (= previous-line-indent (eif-feature-level-indent-m)) (= previous-line-indent (eif-class-level-kw-indent-m))))
+          (if (= previous-line-indent (eif-class-level-kw-indent-m))
+              (eif-class-level-comment-indent-m)
+            (eif-feature-level-comment-indent-m)))
          ;; string continuation, distinguish between the first/second line
          ;; of such a continuation.
          ((looking-at "%")
@@ -1361,6 +1363,7 @@ current line on that preceding line. This function assumes
           (setq what-indentation (eif-what-indentation))
           (cond
            ((eq what-indentation 'eif-what-indent-class-level-comment)
+            ;; TODO: have separate indent for comments before class keyword??
             (eif-class-level-comment-indent-m))
            ((eq what-indentation 'eif-what-indent-as-previous)
             previous-line-indent)
