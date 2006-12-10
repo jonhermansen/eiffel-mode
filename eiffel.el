@@ -1411,9 +1411,8 @@ function assumes `back-to-indentation' is in effect."
         ;; keyword. That one maybe hard to find, so we'll simply
         ;; don't indent when then is the end of a continuation line.
         ;; TODO: to be improved.
-        (if (eif-current-line-is-continuation)
-            'eif-what-indent-as-previous
-            'eif-what-indent-increase))
+        (eif-matching-kw eif-then-matching-keywords)
+        (+ eif-matching-indent eif-indent-increment))
        ((and (looking-at "else\\([ \t]\\|$\\)") (not (eif-is-preceded-by "or")))
         'eif-what-indent-increase)
        ;; we always indent the next line if the previous line ends
