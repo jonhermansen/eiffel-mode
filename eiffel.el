@@ -1346,7 +1346,7 @@ current line on that preceding line. This function assumes
             (+ previous-line-indent (eif-string-continuation-indent-m))))
          ;; if current line starts with an operator, we have to indent or
          ;; stay at the same indent if the previous line is already a continuation.
-         ((looking-at eif-operator-keywords)
+         ((looking-at (concat "\\(" eif-operator-keywords "\\)\\b"))
           (if (or (eif-previous-line-ends-with-continuation) (eif-previous-previous-line-is-continuation))
               previous-line-indent
             (+ previous-line-indent eif-indent-increment)))
@@ -1392,7 +1392,10 @@ function assumes `back-to-indentation' is in effect."
       ;; ("test") or once ("thread") go back one sexp to point at
       ;; feature
       (if (looking-at "[{\(]")
-          (backward-sexp))
+          (let ()
+            (backward-sexp)
+            (if (not (looking-at "feature\|debug\|once"))
+                (forward-sexp))))
       (cond
        ;; the end statement is a bit difficult: inside a body the next
        ;; line (our current line) should be indented at the same level
