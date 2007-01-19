@@ -1126,15 +1126,15 @@ arguments see \\[re-search-forward]."
 arguments see \\[re-search-forward]."
   (interactive "sRE search: ")
   (let ((start (point))
-  found case-fold-search)
-  (while (and (setq found (re-search-backward regexp limit noerror))
-    (eif-in-comment-or-quoted-string-p)))
-  (if (and found
-    (eif-not-in-comment-or-quoted-string-p))
-  found
-    (if (eq noerror t)
-    (goto-char start))
-    nil)))
+        found case-fold-search)
+    (while (and (setq found (re-search-backward regexp limit noerror))
+                (eif-in-comment-or-quoted-string-p)))
+    (if (and found
+             (eif-not-in-comment-or-quoted-string-p))
+        found
+      (if (eq noerror t)
+          (goto-char start))
+      nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                      Indentation Functions.                  ;;
@@ -1346,7 +1346,7 @@ current line on that preceding line. This function assumes
             (+ previous-line-indent (eif-string-continuation-indent-m))))
          ;; if current line starts with an operator, we have to indent or
          ;; stay at the same indent if the previous line is already a continuation.
-         ((looking-at (concat "\\(" eif-operator-keywords "\\)\\b"))
+         ((looking-at (concat "\\(" eif-operator-keywords "\\)\\([ \t]\\|$\\)"))
           (if (or (eif-previous-line-ends-with-continuation) (eif-previous-previous-line-is-continuation))
               previous-line-indent
             (+ previous-line-indent eif-indent-increment)))
@@ -1394,7 +1394,7 @@ function assumes `back-to-indentation' is in effect."
       (if (looking-at "[{\(]")
           (let ()
             (backward-sexp)
-            (if (not (looking-at "feature\|debug\|once"))
+            (if (not (looking-at "\\(feature\\|debug\\|once\\)\\b"))
                 (forward-sexp))))
       (cond
        ;; the end statement is a bit difficult: inside a body the next
@@ -1585,34 +1585,34 @@ finding one of the keywords in MATCHING-KEYWORD-REGEXP and it
 terminates a check clause, set the value of variable
 `eif-matching-indent' to the indentation of the `end' minus the value
 of `eif-check-keyword-indent'."
-  (let* ((c "[^a-z0-9A-Z_.]")
-   (search-regexp (concat c eif-end-keyword c "\\|"
-        c matching-keyword-regexp))
-   (keyword ""))
-  (save-excursion
-    ;; Search backward for a matching keyword.
-    ;; Note that eif-non-indenting-keywords-regexp indicates we haven't
-    ;; found a match so should keep going.
-    (while (and (eif-re-search-backward search-regexp 1 t)
-      (looking-at (concat c eif-non-indenting-keywords-regexp))
-      (not (= (point) 1))))
-    (if (looking-at search-regexp)
-    ;; Then - a keyword was found
-    (progn
-    (setq keyword
-      (buffer-substring (match-beginning 0) (match-end 0)))
-    (if (and (looking-at eif-end-keyword-regexp)
-       (eif-matching-line)
-       (string-match eif-check-keyword eif-matching-kw-for-end))
-    ;; Then
-    (setq eif-matching-indent (- (eif-current-line-indent)
-             (eif-check-keyword-indent-m)))
-      ;; Else
-      (setq eif-matching-indent (eif-current-line-indent))))
-  ;; Else no keyword was found.  I think this is an error
-  (setq eif-matching-indent 0)
-  (message "No matching indent keyword was found"))
-    keyword)))
+  (let* ((c "[^a-z0-9A-Z_.\"]")
+         (search-regexp (concat c eif-end-keyword c "\\|"
+                                c matching-keyword-regexp))
+         (keyword ""))
+    (save-excursion
+      ;; Search backward for a matching keyword.
+      ;; Note that eif-non-indenting-keywords-regexp indicates we haven't
+      ;; found a match so should keep going.
+      (while (and (eif-re-search-backward search-regexp 1 t)
+                  (looking-at (concat c eif-non-indenting-keywords-regexp))
+                  (not (= (point) 1))))
+      (if (looking-at search-regexp)
+          ;; Then - a keyword was found
+          (progn
+            (setq keyword
+                  (buffer-substring (match-beginning 0) (match-end 0)))
+            (if (and (looking-at eif-end-keyword-regexp)
+                     (eif-matching-line)
+                     (string-match eif-check-keyword eif-matching-kw-for-end))
+                ;; Then
+                (setq eif-matching-indent (- (eif-current-line-indent)
+                                             (eif-check-keyword-indent-m)))
+              ;; Else
+              (setq eif-matching-indent (eif-current-line-indent))))
+        ;; Else no keyword was found.  I think this is an error
+        (setq eif-matching-indent 0)
+        (message "No matching indent keyword was found"))
+      keyword)))
 
 (defun eif-line-contains-close-paren ()
   "Return t if the current line contains a close paren, nil otherwise.
@@ -2397,7 +2397,8 @@ invalid data if called while inside a string."
     (save-excursion
       (while (and (<= paren-count 0) (re-search-backward "[()]" limit t))
         (if (looking-at "[(]")
-            (setq paren-count (1+ paren-count))
+            (if (eif-not-in-comment-or-quoted-string-p)
+                (setq paren-count (1+ paren-count)))
           (setq paren-count (1- paren-count))))
       (setq indent
             (if (<= paren-count 0)
