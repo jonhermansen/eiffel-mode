@@ -2396,7 +2396,7 @@ invalid data if called while inside a string."
           (setq limit (- (point) 1024)))
     (save-excursion
       (while (and (<= paren-count 0) (re-search-backward "[()]" limit t))
-        (if (looking-at "[(]")
+        (if (looking-at "[(][^']")
             (if (eif-not-in-comment-or-quoted-string-p)
                 (setq paren-count (1+ paren-count)))
           (setq paren-count (1- paren-count))))
