@@ -1546,37 +1546,6 @@ until or if?"
     (back-to-indentation)
     (current-column)))
 
-(defun eif-indent-assertion-continuation (id-colon)
-  "Generally, are we in line that is a continuation of an assertion?
-More precisely, are we inside a pre or a post condition clause on a
-line that is a continuation of a multi-line assertion beginning with a
-tag?  If so, return the indentation of the continuation line.  The
-argument ID-COLON is t if the line we are indenting begins with
-\"<id> :\", and nil otherwise."
-  (let ((limit (point)))
-  (if (save-excursion
-    (if (re-search-backward
-       (concat eif-feature-level-keywords-regexp "\\|"
-         eif-end-keyword-regexp) nil t)
-      (if (looking-at "ensure\\|require")
-      (setq limit (point)))))
-  (save-excursion
-    (end-of-line)
-    (if (and (not id-colon) (re-search-backward ": *" limit t))
-      (progn
-    (goto-char (match-end 0))
-    (current-column)))))))
-
-(defun eif-indent-assertion-tag ()
-  "Return indentation for part of a multi-line assertion.
-That is, the current line is assumed to be a continuation of a
-multi-line assertion, and we return the required indentation."
-  (save-excursion
-  (if (re-search-backward "ensure\\|require\\|variant\\|invariant\\|check" nil t)
-  (+ (eif-current-line-indent) eif-indent-increment)
-    ;; This option should not occur
-    (error "Could not find assertion tag"))))
-
 (defun eif-matching-kw (matching-keyword-regexp)
   "Search backwards and return a keyword in MATCHING-KEYWORD-REGEXP.
 Also set the value of variable `eif-matching-indent' to the
@@ -2407,48 +2376,6 @@ invalid data if called while inside a string."
               (current-column))))
     indent)))
 
-(defun eif-manifest-array-common ()
-  "Common code for handling indentation/presence of Eiffel manifest arrays."
-  (let ((paren-count 0))
-  (if (= eif-last-feature-level-indent (eif-feature-level-indent-m))
-  nil
-    (setq eif-last-feature-level-indent (eif-feature-level-indent-m))
-    (setq eif-feature-level-indent-regexp
-    (concat "^" (make-string eif-last-feature-level-indent ? )
-      "[^ \t\n]")))
-  (while (and (<= paren-count 0) (re-search-backward "<<\\|>>" nil t))
-    (if (not (eif-peeking-backwards-at "|\\|@"))
-    (if (looking-at "<<")
-      (setq paren-count (1+ paren-count))
-    (setq paren-count (1- paren-count)))))
-  paren-count))
-
-(defun eif-manifest-array-indent ()
-  "Determine if we are inside of a manifest array."
-  (interactive)
-  (let (indent)
-  (save-excursion
-    (if (> (eif-manifest-array-common) 0)
-    (let ((eol (save-excursion (end-of-line) (point))))
-    (setq indent
-      (or (and (re-search-forward "[^< \t]" eol t)
-         (1- (current-column)))
-        (+ (current-column) 2))))))
-  indent))
-
-(defun eif-manifest-array-start ()
-  "Determine the indentation of the statement containing a manifest array."
-  (interactive)
-  (let (indent)
-  (save-excursion
-    (if (> (eif-manifest-array-common) 0)
-    (let ((limit (progn (end-of-line) (point))))
-    (beginning-of-line)
-    (if (re-search-forward "^[ \t]*<<" limit t)
-    (setq indent (- (current-column) 2 eif-indent-increment))
-      (re-search-forward "^[ \t]*" limit t)
-      (setq indent (current-column))))))
-  indent))
 
 ;; ----------------------------------------------------------------------
 ;; imenu support, great for browsing foreign code.
