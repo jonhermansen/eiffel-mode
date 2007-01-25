@@ -1409,13 +1409,15 @@ function assumes `back-to-indentation' is in effect."
        ;; then and else must be treated differently, it should not be
        ;; part of the "and then" or "or else" operators.
        ((and (looking-at "then\\([ \t]\\|$\\)") (not (eif-is-preceded-by "and")))
-        ;; but the then could be the end of a continuation line
-        ;; so the best thing would be indent according to the if/when
-        ;; keyword. That one maybe hard to find, so we'll simply
-        ;; don't indent when then is the end of a continuation line.
-        ;; TODO: to be improved.
-        (eif-matching-kw eif-then-matching-keywords)
-        (+ eif-matching-indent eif-indent-increment))
+        (if (eif-is-preceded-by "ensure")
+            ;; but the then could be the end of a continuation line
+            ;; so the best thing would be indent according to the if/when
+            ;; keyword. That one maybe hard to find, so we'll simply
+            ;; don't indent when then is the end of a continuation line.
+            ;; TODO: to be improved.
+            'eif-what-indent-increase
+          (eif-matching-kw eif-then-matching-keywords)
+          (+ eif-matching-indent eif-indent-increment)))
        ((and (looking-at "else\\([ \t]\\|$\\)") (not (eif-is-preceded-by "or")))
         'eif-what-indent-increase)
        ;; we always indent the next line if the previous line ends
