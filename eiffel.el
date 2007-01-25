@@ -773,8 +773,8 @@ This will also match local variable and parameter declarations.")
    (,(eif-anchor "class\\|is\\|not")        2 font-lock-keyword-face nil)
    (,(eif-anchor eif-operator-keywords)     2 font-lock-keyword-face nil)
    (,(eif-anchor eif-misc-keywords)         2 font-lock-keyword-face nil)
-   (,(eif-anchor eif-all-keywords)          2 font-lock-keyword-face nil)
    (,(eif-anchor "check\\|ensure then\\|ensure\\|invariant\\|require else\\|require\\|variant") 2 font-lock-keyword-face nil)
+   (,(eif-anchor eif-all-keywords)          2 font-lock-keyword-face nil)
 
    ;; Quoted expr's in comments.
    ("`[^`'\n]*'" 0 font-lock-string-face t)
