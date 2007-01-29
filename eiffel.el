@@ -670,8 +670,9 @@ See `eif-preprocessor-keywords'.")
   "Eiffel keywords representing major variables.")
 
 (defconst eif-standard-class-keywords
-  (concat "ANY\\|BIT\\|BOOLEAN\\|CHARACTER\\|DOUBLE\\|GENERAL" "\\|"
-    "INTEGER\\|NONE\\|POINTER\\|REAL\\|STRING")
+  (concat "ANY\\|ARRAY\\|BIT\\|BOOLEAN\\|CHARACTER\\|DOUBLE\\|GENERAL\\|"
+    "INTEGER\\|INTEGER_[0-9]+\\|NATURAL_[0-9]+\\|NONE\\|POINTER\\|REAL\\|"
+    "STRING")
   "Eiffel keywords representing standard classes.")
 
 (defconst eif-all-keywords
