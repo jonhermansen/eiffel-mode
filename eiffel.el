@@ -1163,7 +1163,7 @@ don't start with a relevant keyword, the calculation is handed off to
     (cond ((or (looking-at eif-create-keyword-regexp)
        (looking-at eif-indexing-keyword-regexp))
      ;; Class-level or minor occurence?
-     (if (save-excursion (eif-find-beginning-of-feature))
+     (if (eif-in-feature-body)
        ;; Minor.
        (setq indent (eif-calc-indent-non-keyword))
        ;; Class-level.
@@ -1395,7 +1395,7 @@ function assumes `back-to-indentation' is in effect."
       (if (looking-at "[{\(]")
           (let ()
             (backward-sexp)
-            (if (not (looking-at "\\(feature\\|debug\\|once\\)\\b"))
+            (if (not (looking-at "\\(feature\\|debug\\|once\\|create\\)\\b"))
                 (forward-sexp))))
       (cond
        ;; the end statement is a bit difficult: inside a body the next
@@ -2063,37 +2063,37 @@ This will always move backward, if possible."
   (interactive)
 
   (let ((start (point))
-  candidate routine-begin)
-  (if (eif-re-search-backward (concat "\\s-" eif-probably-feature-regexp)
-        nil t)
-  (progn
-    (forward-char) ;; Skip the whitespace character matched above.
-    (if (not (or (looking-at (concat
-          "\\(" eif-attribute-regexp
-          "\\|" eif-constant-regexp "\\)"))))
-      ;; This is a routine.  Done.
-      (point)
-    ;; Variable/attribute or constant declaration matched.
-    ;; Now we go back and find the previous routine start, the
-    ;; following end, and see if the current position
-    ;; (candidate) is between.  If it is, then candidate is a
-    ;; variable or constant declaration within a routine, so
-    ;; we're interested in the routine start.  If it isn't,
-    ;; then it must be a class attribute or constant, so it is
-    ;; what we're looking for.
-    (setq candidate (point))
-    (goto-char start)
-    (if (eif-re-search-backward
-     (concat "\\s-" eif-routine-begin-regexp) nil t)
-    (progn
-      (forward-char)
-      (setq routine-begin (point))
-      (eif-find-end-of-feature)
-      (if (and (< routine-begin candidate)
-         (< candidate (point)))
-        (goto-char routine-begin)
-      (goto-char candidate)))
-      (goto-char candidate)))))))
+        candidate routine-begin)
+    (if (eif-re-search-backward (concat "\\s-" eif-probably-feature-regexp)
+                                nil t)
+        (progn
+          (forward-char) ;; Skip the whitespace character matched above.
+          (if (not (or (looking-at (concat
+                                    "\\(" eif-attribute-regexp
+                                    "\\|" eif-constant-regexp "\\)"))))
+              ;; This is a routine.  Done.
+              (point)
+            ;; Variable/attribute or constant declaration matched.
+            ;; Now we go back and find the previous routine start, the
+            ;; following end, and see if the current position
+            ;; (candidate) is between.  If it is, then candidate is a
+            ;; variable or constant declaration within a routine, so
+            ;; we're interested in the routine start.  If it isn't,
+            ;; then it must be a class attribute or constant, so it is
+            ;; what we're looking for.
+            (setq candidate (point))
+            (goto-char start)
+            (if (eif-re-search-backward
+                 (concat "\\s-" eif-routine-begin-regexp) nil t)
+                (progn
+                  (forward-char)
+                  (setq routine-begin (point))
+                  (eif-find-end-of-feature)
+                  (if (and (< routine-begin candidate)
+                           (< candidate (point)))
+                      (goto-char routine-begin)
+                    (goto-char candidate)))
+              (goto-char candidate)))))))
 
 (defun eif-beginning-of-feature (&optional arg)
   "Move backward to next feature beginning.
@@ -2328,13 +2328,13 @@ With optional argument WHOLE-EXP, indent any additional lines of the
 same clause rigidly along with this one (not implemented yet)."
   (interactive "p")
   (save-excursion
-  (beginning-of-line)
-  (skip-chars-forward " \t")
-  (let ((indent (eif-calc-indent)))
-    (if (not (= indent (current-column)))
-    (progn
-    (delete-horizontal-space)
-    (indent-to indent)))))
+    (beginning-of-line)
+    (skip-chars-forward " \t")
+    (let ((indent (eif-calc-indent)))
+      (if (not (= indent (current-column)))
+          (progn
+            (delete-horizontal-space)
+            (indent-to indent)))))
   (skip-chars-forward " \t"))
 
 (defun eif-move-to-prev-non-blank ()
@@ -2354,6 +2354,14 @@ Return t if successful, nil if not."
     (if (looking-at "[ \t]\"[[{]\n")
       (setq verbatim-string t)))
   verbatim-string))
+
+(defun eif-in-feature-body ()
+  "Return non nil if inside the body of a feature"
+  (interactive)
+  (save-excursion
+    (while (and (> (point) 1) (not (looking-at "\\(do\\|once\\|inherit\\|class\\|indexing\\|feature\\)\\b")))
+      (backward-sexp))
+    (looking-at "\\(do\\|once\\)")))
 
 (defvar eif-last-feature-level-indent -1)
 (defvar eif-feature-level-indent-regexp nil)
