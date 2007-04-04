@@ -1184,7 +1184,7 @@ don't start with a relevant keyword, the calculation is handed off to
      (setq indent (eif-feature-level-kw-indent-m)))
     ((looking-at eif-end-keyword)
      ;; End keyword (indent to level of matching keyword)
-     (if (string-match "end"
+     (if (string-match eif-end-keyword
            (eif-matching-kw
           eif-end-matching-keywords-regexp))
        ;; Then
@@ -1217,7 +1217,7 @@ don't start with a relevant keyword, the calculation is handed off to
      (setq kw-match
          (eif-matching-kw
       eif-control-flow-matching-keywords-regexp))
-     (cond ((string-match "end" kw-match)
+     (cond ((string-match eif-end-keyword kw-match)
       (setq indent eif-matching-indent))
          (t
       (setq indent
@@ -1231,7 +1231,7 @@ don't start with a relevant keyword, the calculation is handed off to
 
      (setq kw-match (eif-matching-kw
          eif-check-matching-keywords-regexp))
-     (cond ((string-match "end" kw-match)
+     (cond ((string-match eif-end-keyword kw-match)
       (setq indent (+ eif-matching-indent
           (eif-check-keyword-indent-m))))
          (t
@@ -1247,14 +1247,14 @@ don't start with a relevant keyword, the calculation is handed off to
      ;;  value (eif-indent-increment + eif-rescue-keyword-indent).
      (setq kw-match (eif-matching-kw
          eif-rescue-matching-keywords-regexp))
-     (cond ((string-match "end" kw-match)
+     (cond ((string-match eif-end-keyword kw-match)
       (setq indent (+ eif-matching-indent
           (eif-rescue-keyword-indent-m))))
          (t
       (setq indent eif-matching-indent))))
     ((looking-at eif-from-level-keywords-regexp)
      ;; From level keywords (indent to level of matching "From")
-     (if (string-match "end" (eif-matching-kw eif-from-keyword))
+     (if (string-match eif-end-keyword (eif-matching-kw eif-from-keyword))
        ;; Closest matching KW is `end'.
        (setq indent (- eif-matching-indent eif-indent-increment))
        ;; Closest matching KW is one of `eif-from-keyword'.
@@ -1262,7 +1262,7 @@ don't start with a relevant keyword, the calculation is handed off to
     ((looking-at eif-if-or-inspect-level-keywords-regexp)
      ;; If level keywords (indent to level of matching
      ;; "If" or "Inspect")
-     (if (string-match "end"
+     (if (string-match eif-end-keyword
            (eif-matching-kw
           eif-if-or-inspect-keyword-regexp))
        ;; Closest matching KW is `end'.
@@ -1400,13 +1400,16 @@ function assumes `back-to-indentation' is in effect."
       (cond
        ;; the end statement is a bit difficult: inside a body the next
        ;; line (our current line) should be indented at the same level
-       ;; but the end of feature signals a decrease.
+       ;; but the end of the check statement (if checks are indented)
+       ;; or feature signals a decrease.
        ((looking-at "end\\([ \t]\\|$\\)")
-        (if (= (eif-current-line-indent) (eif-feature-level-kw-indent-m))
+        (if (or
+             (= (eif-current-line-indent) (eif-feature-level-kw-indent-m))
+             (and (> eif-check-keyword-indent 0) (eif-is-end-of-check)))
             'eif-what-indent-decrease
           'eif-what-indent-as-previous))
        ;; indent if previous line starts with these keywords
-       ((looking-at "\\(indexing\\|deferred\\|expanded\\|separate\\|class\\|rename\\|export\\|undefine\\|redefine\\|inherit\\|creation\\|create\\|feature\\|is\\|obsolete\\|require\\|local\\|do\\|once\\|if\\|inspect\\|when\\|from\\|variant\\|invariant\\|until\\|loop\\|check\\|debug\\|rescue\\|ensure\\|invariant\\)\\([ \t]\\|$\\)") 'eif-what-indent-increase)
+       ((looking-at "\\(indexing\\|deferred\\|expanded\\|separate\\|class\\|rename\\|export\\|undefine\\|redefine\\|inherit\\|creation\\|create\\|feature\\|is\\|obsolete\\|require\\|local\\|do\\|once\\|if\\|elseif\\|inspect\\|when\\|from\\|variant\\|invariant\\|until\\|loop\\|check\\|debug\\|rescue\\|ensure\\|invariant\\)\\([ \t]\\|$\\)") 'eif-what-indent-increase)
        ;; then and else must be treated differently, it should not be
        ;; part of the "and then" or "or else" operators.
        ((and (looking-at "then\\([ \t]\\|$\\)") (not (eif-is-preceded-by "and")))
@@ -1549,6 +1552,12 @@ until or if?"
     (back-to-indentation)
     (current-column)))
 
+(defun eif-is-end-of-check ()
+  "Does the current end belong to the check keyword?"
+  (setq kw-match (eif-matching-kw eif-end-matching-keywords-regexp))
+  (if (string-match eif-check-keyword kw-match)
+      t))
+
 (defun eif-matching-kw (matching-keyword-regexp)
   "Search backwards and return a keyword in MATCHING-KEYWORD-REGEXP.
 Also set the value of variable `eif-matching-indent' to the
@@ -1572,7 +1581,7 @@ of `eif-check-keyword-indent'."
           ;; Then - a keyword was found
           (progn
             (setq keyword
-                  (buffer-substring (match-beginning 0) (match-end 0)))
+                  (buffer-substring-no-properties (match-beginning 0) (match-end 0)))
             (if (and (looking-at eif-end-keyword-regexp)
                      (eif-matching-line)
                      (string-match eif-check-keyword eif-matching-kw-for-end))
@@ -1734,7 +1743,7 @@ of the syntactic construct containing the point."
        ;; Then
        (progn
          (setq eif-matching-kw-for-end
-         (buffer-substring match-start (match-end 0)))
+         (buffer-substring-no-properties match-start (match-end 0)))
          (if (looking-at "[ \t\n]+")
            (goto-char (match-end 0))))
          ;; Else
