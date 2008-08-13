@@ -436,7 +436,7 @@ in Debian GNU/Linux, when the default value is \"se-compile\"."
   "class\\|feature\\|convert" "\\|"
   "deferred[ \t]+class\\|expanded[ \t]+class" "\\|"
   "reference[ \t]+class\\|separate[ \t]+class" "\\|"
-  "inherit\\|inherit\\|creation\\|create"))
+  "inherit\\|inherit\\|create"))
   "Regexp of keywords introducing class level clauses, with some context.
 Note that `invariant' and `obsolete' are not included here since can
 function as more than one type of keyword.")
@@ -594,7 +594,7 @@ If one of these occurs prior to an `eif-obsolete-keyword' then the
   "Regexp matching `indexing' keyword, with trailing context.")
 
 (defconst eif-indentation-keywords
-  (concat "indexing\\|convert\\|rescue\\|inherit\\|creation\\|create"
+  (concat "indexing\\|convert\\|rescue\\|inherit\\|create"
 	  "\\|"
 	  "invariant\\|require\\|local\\|ensure\\|obsolete\\|external\\|alias" "\\|"
     eif-from-level-keywords "\\|"
@@ -615,7 +615,7 @@ See `eif-indentation-keywords'.")
   "Regexp of keywords with context cancelling any effect on indentation.")
 
 (defconst eif-feature-indentation-keywords-regexp
-  (eif-word-anchor "creation\\|feature")
+  (eif-word-anchor "create\\|feature")
   "Keywords that denote the presence of features following them.")
 
 ;; (defconst eif-is-keyword-regexp "\\(.*[ \t)]\\)?is[ \t]*\\(--.*\\)?$"
@@ -1409,7 +1409,7 @@ function assumes `back-to-indentation' is in effect."
 	    'eif-what-indent-decrease
 	  'eif-what-indent-as-previous))
        ;; indent if previous line starts with these keywords
-       ((looking-at "\\(indexing\\|deferred\\|expanded\\|separate\\|class\\|rename\\|export\\|undefine\\|redefine\\|inherit\\|creation\\|create\\|feature\\|is\\|obsolete\\|require\\|local\\|do\\|once\\|if\\|elseif\\|inspect\\|when\\|from\\|variant\\|invariant\\|until\\|loop\\|check\\|debug\\|rescue\\|ensure\\|invariant\\)\\([ \t]\\|$\\)") 'eif-what-indent-increase)
+       ((looking-at "\\(indexing\\|deferred\\|expanded\\|separate\\|class\\|rename\\|export\\|undefine\\|redefine\\|inherit\\|create\\|feature\\|is\\|obsolete\\|require\\|local\\|do\\|once\\|if\\|elseif\\|inspect\\|when\\|from\\|variant\\|invariant\\|until\\|loop\\|check\\|debug\\|rescue\\|ensure\\|invariant\\)\\([ \t]\\|$\\)") 'eif-what-indent-increase)
        ;; then and else must be treated differently, it should not be
        ;; part of the "and then" or "or else" operators.
        ((and (looking-at "then\\([ \t]\\|$\\)") (not (eif-is-preceded-by "and")))
