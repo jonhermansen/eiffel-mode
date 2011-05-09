@@ -586,7 +586,7 @@ If one of these occurs prior to an `eif-obsolete-keyword' then the
   "Regexp matching `create' keyword, with trailing context.")
 
 (defconst eif-indexing-keyword
-  "indexing"
+  "indexing\\|note"
   "Eiffel `indexing' keyword.  Can be used at class or minor level.")
 
 (defconst eif-indexing-keyword-regexp
@@ -594,7 +594,7 @@ If one of these occurs prior to an `eif-obsolete-keyword' then the
   "Regexp matching `indexing' keyword, with trailing context.")
 
 (defconst eif-indentation-keywords
-  (concat "indexing\\|convert\\|rescue\\|inherit\\|create"
+  (concat "indexing\\|note\\|convert\\|rescue\\|inherit\\|create"
 	  "\\|"
 	  "invariant\\|require\\|local\\|ensure\\|obsolete\\|external\\|alias" "\\|"
     eif-from-level-keywords "\\|"
@@ -641,10 +641,13 @@ See `eif-operator-keywords'.")
     "\\)\\|:=\\)[ \t]*\\(--.*\\)?$")
   "Eiffel operators - used to identify continuation lines.")
 
-;; strip keyword is obsolete, but still in ISE Eiffel 5.7
+(defconst eif-attachment-keywords
+  (concat "attached\\|detachable")
+  "Eiffel attachment keywords.")
+
 (defconst eif-misc-keywords
   (concat "agent\\|all\\|as\\|frozen\\|infix\\|like" "\\|"
-    "old\\|precursor\\|prefix\\|retry\\|strip\\|unique\\|xor" "\\|"
+    "old\\|precursor\\|prefix\\|retry\\|unique\\|xor" "\\|"
     "expanded\\|reference")
   "Eiffel miscellaneous keywords.")
 
@@ -670,9 +673,9 @@ See `eif-preprocessor-keywords'.")
   "Eiffel keywords representing major variables.")
 
 (defconst eif-standard-class-keywords
-  (concat "ANY\\|ARRAY\\|BIT\\|BOOLEAN\\|CHARACTER\\|DOUBLE\\|GENERAL\\|"
-    "INTEGER\\|INTEGER_[0-9]+\\|NATURAL_[0-9]+\\|NONE\\|POINTER\\|REAL\\|"
-    "STRING")
+  (concat "ANY\\|NONE\\|ARRAY\\|GENERAL\\|"
+          "\\(BOOLEAN\\|CHARACTER\\(_8\\|_32\\)?\\|DOUBLE\\|INTEGER\\(_8\\|_16\\|_32\\|_64\\)?\\|NATURAL\\(_8\\|_16\\|_32\\|_64\\)?\\|POINTER\\|REAL\\(_32\\|_64\\)?\\)(_REF)?\\|"
+    "CELL\\|STRING\\|STRING_8\\|STRING_32\\|HASHABLE")
   "Eiffel keywords representing standard classes.")
 
 (defconst eif-all-keywords
@@ -771,6 +774,7 @@ This will also match local variable and parameter declarations.")
    ;; Keywords.  The first few can appear in conjunction with other
    ;; keywords, and the anchored regexp doesn't cater for overlaps,
    ;; thus there are several entries here.
+   (,(eif-anchor eif-attachment-keywords)   2 font-lock-keyword-face nil)
    (,(eif-anchor "class\\|is\\|not")        2 font-lock-keyword-face nil)
    (,(eif-anchor eif-operator-keywords)     2 font-lock-keyword-face nil)
    (,(eif-anchor eif-misc-keywords)         2 font-lock-keyword-face nil)
@@ -994,7 +998,7 @@ at the end of STRING, we do not include a null substring for that."
 
 (defun eif-compile-internal ()
   "Compile an Eiffel root class.  Internal version.
-Returns the same thing as \\[compile-internal] - the compilation buffer."
+Returns the same thing as \\[compile-start] - the compilation buffer."
 
   (let
       ((cmd (concat eif-compile-command
@@ -1007,7 +1011,7 @@ Returns the same thing as \\[compile-internal] - the compilation buffer."
 				" "    eif-root-proc))))
        (compilation-mode-hook (cons 'eif-compilation-mode-hook
 				    compilation-mode-hook)))
-    (compile-internal cmd "No more errors")))
+    (compilation-start cmd "No more errors")))
 
 (defun eif-run-internal ()
   "Run a compiled Eiffel program.  Internal version."
@@ -1152,7 +1156,7 @@ indentation at the beginning of the current line.  For lines that
 don't start with a relevant keyword, the calculation is handed off to
 \\[eif-calc-indent-non-keyword]."
   (let ((indent   0)
-  kw-match)
+        kw-match)
 
   (save-excursion
     (back-to-indentation)
@@ -1409,7 +1413,7 @@ function assumes `back-to-indentation' is in effect."
 	    'eif-what-indent-decrease
 	  'eif-what-indent-as-previous))
        ;; indent if previous line starts with these keywords
-       ((looking-at "\\(indexing\\|deferred\\|expanded\\|separate\\|class\\|rename\\|export\\|undefine\\|redefine\\|inherit\\|create\\|feature\\|is\\|obsolete\\|require\\|local\\|do\\|once\\|if\\|elseif\\|inspect\\|when\\|from\\|variant\\|invariant\\|until\\|loop\\|check\\|debug\\|rescue\\|ensure\\|invariant\\|external\\|alias\\)\\([ \t]\\|$\\)") 'eif-what-indent-increase)
+       ((looking-at "\\(indexing\\|deferred\\|expanded\\|separate\\|class\\|rename\\|export\\|undefine\\|redefine\\|select\\|inherit\\|create\\|feature\\|is\\|obsolete\\|require\\|local\\|do\\|once\\|if\\|elseif\\|inspect\\|when\\|from\\|variant\\|invariant\\|until\\|loop\\|check\\|debug\\|rescue\\|ensure\\|invariant\\|external\\|alias\\)\\([ \t]\\|$\\)") 'eif-what-indent-increase)
        ;; then and else must be treated differently, it should not be
        ;; part of the "and then" or "or else" operators.
        ((and (looking-at "then\\([ \t]\\|$\\)") (not (eif-is-preceded-by "and")))
