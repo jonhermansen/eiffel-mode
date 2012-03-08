@@ -436,7 +436,7 @@ in Debian GNU/Linux, when the default value is \"se-compile\"."
   "class\\|feature\\|convert" "\\|"
   "deferred[ \t]+class\\|expanded[ \t]+class" "\\|"
   "reference[ \t]+class\\|separate[ \t]+class" "\\|"
-  "inherit\\|inherit\\|create"))
+  "inherit\\|create\\|convert"))
   "Regexp of keywords introducing class level clauses, with some context.
 Note that `invariant' and `obsolete' are not included here since can
 function as more than one type of keyword.")
@@ -446,7 +446,7 @@ function as more than one type of keyword.")
   "Those keywords that introduce subclauses of the inherit clause.")
 
 (defconst eif-feature-level-keywords
-  "require\\|local\\|deferred\\|separate\\|do\\|once\\|ensure\\|alias\\|external"
+  "require\\|local\\|deferred\\|separate\\|do\\|once\\|ensure\\|alias\\|external\\|assign\\|attribute"
   "Those keywords that are internal to features (in particular, routines).")
 
 (defconst eif-feature-level-keywords-regexp
@@ -594,9 +594,9 @@ If one of these occurs prior to an `eif-obsolete-keyword' then the
   "Regexp matching `indexing' keyword, with trailing context.")
 
 (defconst eif-indentation-keywords
-  (concat "indexing\\|note\\|convert\\|rescue\\|inherit\\|create"
+  (concat "indexing\\|note\\|convert\\|rescue\\|inherit\\|create\\|convert"
 	  "\\|"
-	  "invariant\\|require\\|local\\|ensure\\|obsolete\\|external\\|alias" "\\|"
+	  "invariant\\|require\\|local\\|ensure\\|obsolete\\|external\\|alias\\|assign\\|attribute" "\\|"
     eif-from-level-keywords "\\|"
     eif-if-or-inspect-level-keywords "\\|"
     eif-end-matching-keywords)
@@ -615,7 +615,7 @@ See `eif-indentation-keywords'.")
   "Regexp of keywords with context cancelling any effect on indentation.")
 
 (defconst eif-feature-indentation-keywords-regexp
-  (eif-word-anchor "create\\|feature")
+  (eif-word-anchor "create\\|convert\\|feature")
   "Keywords that denote the presence of features following them.")
 
 ;; (defconst eif-is-keyword-regexp "\\(.*[ \t)]\\)?is[ \t]*\\(--.*\\)?$"
@@ -1399,7 +1399,7 @@ function assumes `back-to-indentation' is in effect."
       (if (looking-at "[{\(]")
 	  (let ()
 	    (backward-sexp)
-	    (if (not (looking-at "\\(feature\\|debug\\|once\\|create\\)\\b"))
+	    (if (not (looking-at "\\(feature\\|debug\\|once\\|create\\|convert\\)\\b"))
 		(forward-sexp))))
       (cond
        ;; the end statement is a bit difficult: inside a body the next
@@ -1413,7 +1413,7 @@ function assumes `back-to-indentation' is in effect."
 	    'eif-what-indent-decrease
 	  'eif-what-indent-as-previous))
        ;; indent if previous line starts with these keywords
-       ((looking-at "\\(indexing\\|deferred\\|expanded\\|separate\\|class\\|rename\\|export\\|undefine\\|redefine\\|select\\|inherit\\|create\\|feature\\|is\\|obsolete\\|require\\|local\\|do\\|once\\|if\\|elseif\\|inspect\\|when\\|from\\|variant\\|invariant\\|until\\|loop\\|check\\|debug\\|rescue\\|ensure\\|invariant\\|external\\|alias\\)\\([ \t]\\|$\\)") 'eif-what-indent-increase)
+       ((looking-at "\\(indexing\\|deferred\\|expanded\\|separate\\|class\\|rename\\|export\\|undefine\\|redefine\\|select\\|inherit\\|create\\|convert\\|feature\\|is\\|obsolete\\|require\\|local\\|do\\|once\\|if\\|elseif\\|inspect\\|when\\|from\\|variant\\|invariant\\|until\\|loop\\|check\\|debug\\|rescue\\|ensure\\|invariant\\|external\\|alias\\|assign\\|attribute\\)\\([ \t]\\|$\\)") 'eif-what-indent-increase)
        ;; then and else must be treated differently, it should not be
        ;; part of the "and then" or "or else" operators.
        ((and (looking-at "then\\([ \t]\\|$\\)") (not (eif-is-preceded-by "and")))
