@@ -9,10 +9,15 @@
 ;; Authors: 1989-1990 Stephen Omohundro, ISE and Bob Weiner
 ;;          1993-1996 Tower Technology Corporation
 ;;          1999-2004 Martin Schwenke <martin@meltin.net>
-;;          2006-     Berend de Boer <berend@pobox.com>
-;; Maintainer: berend@pobox.com
+;;          2006-2012 Berend de Boer <berend@pobox.com>
+;;          2019-     Jon Hermansen <jon.hermansen@gmail.com>
+;; Maintainer: jon.hermansen@gmail.com
 ;; Keywords: eiffel languages oop
 ;; Requires: font-lock, compile, easymenu, imenu
+;; URL: https://github.com/jonhermansen/eiffel-emacs
+;; Version: 0.1
+;; Keywords: eiffel
+;; Package-Requires: ((emacs "24.5"))
 
 ;; This file is derived from eiffel4.el from Tower Technology Corporation.
 ;;
@@ -40,11 +45,6 @@
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
 ;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;; Boston, MA 02111-1307, USA.
-
-;; URL: https://github.com/jonhermansen/eiffel-emacs
-;; Version: 0.1
-;; Keywords: eiffel
-;; Package-Requires: ((emacs "24.5"))
 
 ;;; Commentary:
 
