@@ -2,7 +2,7 @@
 
 [![Build Status](https://api.travis-ci.org/jonhermansen/eiffel-mode.svg?branch=master)](https://travis-ci.org/jonhermansen/eiffel-mode)
 
-`eiffel-mode` is a major-mode for editing [Eiffel](https://en.wikipedia.org/wiki/Eiffel_(programming_language))-files in [GNU Emacs](https://www.gnu.org/software/emacs/).
+`eiffel-mode` is a major-mode for editing [Eiffel](https://en.wikipedia.org/wiki/Eiffel_(programming_language)) files in [GNU Emacs](https://www.gnu.org/software/emacs/).
 
 # Installation
 
