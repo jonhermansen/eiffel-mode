@@ -41,6 +41,11 @@
 ;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;; Boston, MA 02111-1307, USA.
 
+;; URL: https://github.com/jonhermansen/eiffel-emacs
+;; Version: 0.1
+;; Keywords: eiffel
+;; Package-Requires: ((emacs "24.3"))
+
 ;;; Commentary:
 
 ;;  NEW VERSIONS
@@ -1503,10 +1508,10 @@ until or if?"
   "Does the previous line indicate that the next line is a continuation?"
   (save-excursion
     (condition-case nil
-        (do-eiffel-previous-line-is-continuation)
+        (eiffel-previous-line-is-continuation)
       (error nil))))
 
-(defun do-eiffel-previous-line-is-continuation ()
+(defun eiffel-previous-line-is-continuation ()
   "Does the previous line indicate that the next line is a continuation?"
   (save-excursion
     (beginning-of-line)
@@ -1542,16 +1547,16 @@ until or if?"
   "Amount of identation of previous line."
   (save-excursion
     (condition-case nil
-        (do-eiffel-previous-line-indent)
-      (error (do-eiffel-previous-line-indent2)))))
+        (eiffel-previous-line-indent)
+      (error (eiffel-previous-line-indent2)))))
 
-(defun do-eiffel-previous-line-indent ()
+(defun eiffel-previous-line-indent ()
   "Indentation of previous sexp"
   (backward-sexp)
   (back-to-indentation)
   (current-column))
 
-(defun do-eiffel-previous-line-indent2 ()
+(defun eiffel-previous-line-indent2 ()
   "Indentation of previous word, but negative"
   (backward-word 1)
   (back-to-indentation)
@@ -1912,7 +1917,7 @@ does matching of parens ala \\[backward-sexp]'."
 ;; Insert an Eiffel class template (per RFO coding standards)
 (fset 'insert-eiffel-template
    [?\C-x ?i ?d ?: ?/ ?a ?c ?t ?i ?v ?e ?/ ?a ?m ?a ?l ?a ?s ?o ?f ?t ?/ ?t ?e ?m ?p ?l ?a ?t ?e ?s ?+ ?f ?o ?r ?m ?s ?/ ?e ?5 ?. ?t ?p ?l return ?\C-s ?c ?l ?a ?s ?s ?  ?\C-f ?\C-b])
-(local-set-key "t" 'insert-eiffel-template)
+;; (local-set-key "t" 'insert-eiffel-template)
 
 ;-------------------------
 ; Eiffel bar Comment
@@ -2144,8 +2149,7 @@ compilation and indentation variables that can be customized."
   indent-line-function         'eiffel-indent-line
   indent-region-function       'eiffel-indent-region
   ;;
-  ;; Default would be simple "-- ". This is a personalized form
-  comment-start                "--RFO "
+  comment-start                "-- "
   comment-end                  ""
   comment-column               32
   comment-start-skip           eiffel-comment-start-skip
