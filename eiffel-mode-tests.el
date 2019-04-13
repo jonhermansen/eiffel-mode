@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t; -*-
+
 ;;; eiffel-mode-tests --- This file contains automated tests for eiffel-mode.el
 
 ;;; Commentary:
