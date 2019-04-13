@@ -44,7 +44,7 @@
 ;; URL: https://github.com/jonhermansen/eiffel-emacs
 ;; Version: 0.1
 ;; Keywords: eiffel
-;; Package-Requires: ((emacs "24.3"))
+;; Package-Requires: ((emacs "24.5"))
 
 ;;; Commentary:
 
