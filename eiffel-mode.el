@@ -1,4 +1,4 @@
-;;; eiffel.el --- major mode for editing Eiffel files.
+;;; eiffel-mode.el --- major mode for editing Eiffel files.
 
 ;; Copyright (C) 1989, 1990, 93, 94, 95, 96, 99, 2000, 01, 02, 04
 ;;                         Tower Technology Corporation,
@@ -2690,5 +2690,5 @@ Sort by position if sort-method is 0. Sort by name if sort-method is 1."
 ;; XEmacs addition
 ;;;###autoload(add-to-list 'auto-mode-alist '("\\.e\\'" . eiffel-mode))
 
-(provide 'eiffel)
-;;; eiffel.el ends here
+(provide 'eiffel-mode)
+;;; eiffel-mode.el ends here
