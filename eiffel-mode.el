@@ -1,6 +1,4 @@
-;; -*- lexical-binding: t; -*-
-
-;;; eiffel-mode.el --- major mode for editing Eiffel files.
+;;; eiffel-mode.el --- major mode for editing Eiffel files. -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 1989, 1990, 93, 94, 95, 96, 99, 2000, 01, 02, 04
 ;;                         Tower Technology Corporation,
@@ -20,6 +18,7 @@
 ;; Version: 0.1
 ;; Keywords: eiffel
 ;; Package-Requires: ((emacs "24.5"))
+
 
 ;; This file is derived from eiffel4.el from Tower Technology Corporation.
 ;;
